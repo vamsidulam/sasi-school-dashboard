@@ -1,9 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 import Login from './pages/Login.jsx'
-import Overview from './pages/Overview.jsx'
 import Dashboard from './pages/Dashboard.jsx'
 import Branches from './pages/Branches.jsx'
 import Programs from './pages/Programs.jsx'
@@ -26,7 +25,7 @@ export default function AppRoutes() {
           </ProtectedRoute>
         }
       >
-        <Route index element={<Overview />} />
+        <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="branches" element={<Branches />} />
         <Route path="programs" element={<Programs />} />

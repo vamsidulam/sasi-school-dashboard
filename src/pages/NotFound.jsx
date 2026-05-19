@@ -9,7 +9,7 @@ export default function NotFound() {
         The page you're looking for doesn't exist.
       </p>
       <Link
-        to="/"
+        to="/dashboard"
         className="mt-6 inline-flex items-center rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
       >
         Back to dashboard
