@@ -121,7 +121,7 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="my-5 flex items-center gap-3">
+          {/* <div className="my-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-gray-200" />
             <span className="text-xs uppercase tracking-wide text-gray-400">or</span>
             <div className="h-px flex-1 bg-gray-200" />
@@ -152,7 +152,7 @@ export default function Login() {
               />
             </svg>
             Sign in with Google
-          </button>
+          </button> */}
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-400">
