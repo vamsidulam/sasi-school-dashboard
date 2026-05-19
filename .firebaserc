@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "anveshana-18084"
+  },
+  "targets": {
+    "anveshana-18084": {
+      "hosting": {
+        "dashboard": [
+          "sasi-school-dashboard"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}
