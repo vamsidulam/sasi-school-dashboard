@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { Users, BarChart3, Award, AlertTriangle } from 'lucide-react'
 import KpiCard from '../components/KpiCard.jsx'
 import EmptyState from '../components/EmptyState.jsx'
+import IntermediateDashboard from '../components/intermediate/IntermediateDashboard.jsx'
 
 import DashboardFilters from '../components/dashboard/DashboardFilters.jsx'
 import SectionCard from '../components/dashboard/SectionCard.jsx'
@@ -16,7 +17,13 @@ import BranchClassBar from '../components/dashboard/BranchClassBar.jsx'
 
 import { CLASS_DATA, STATE_CLASS_RANKS } from '../components/dashboard/dummyData.js'
 
+const TABS = [
+  { id: 'school', label: 'School Dashboard' },
+  { id: 'intermediate', label: 'Intermediate Dashboard' },
+]
+
 export default function Dashboard() {
+  const [tab, setTab] = useState('school')
   const [exam, setExam] = useState('HALF YEARLY')
   const [klass, setKlass] = useState('1ST')
 
@@ -50,13 +57,29 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-gray-900">Performance Analysis</h1>
-        <p className="text-sm text-gray-500">
-          Branch-level descriptive & skill breakdown — modeled after the SASI half-yearly state report.
-        </p>
+      
+
+      <div className="flex gap-1 border-b border-gray-200">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-4 py-2 text-sm font-medium transition ${
+              tab === t.id
+                ? 'border-red-600 text-red-600'
+                : 'border-transparent text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
+      {tab === 'intermediate' ? (
+        <IntermediateDashboard />
+      ) : (
+      <>
       <DashboardFilters
         exam={exam}
         onExamChange={setExam}
@@ -194,6 +217,8 @@ export default function Dashboard() {
             description="The sample currently has rich data for 1ST and 8TH. The page-1 grid above still ranks every class."
           />
         </SectionCard>
+      )}
+      </>
       )}
     </div>
   )

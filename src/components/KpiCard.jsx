@@ -15,7 +15,7 @@ export default function KpiCard({ title, value, subtitle, trend, icon: Icon }) {
         {typeof trend === 'number' ? (
           <span
             className={`inline-flex items-center gap-0.5 font-medium ${
-              trendIsUp ? 'text-green-600' : 'text-red-600'
+              trendIsUp ? 'text-brand-600' : 'text-gray-500'
             }`}
           >
             {trendIsUp ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
