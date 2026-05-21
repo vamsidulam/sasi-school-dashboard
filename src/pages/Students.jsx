@@ -5,10 +5,12 @@ import StudentsTable from '../components/students/StudentsTable.jsx'
 import StudentFormModal from '../components/students/StudentFormModal.jsx'
 import ConfirmDeleteDialog from '../components/students/ConfirmDeleteDialog.jsx'
 import LoadingSpinner from '../components/LoadingSpinner.jsx'
+import SchoolIntermediateTabs from '../components/common/SchoolIntermediateTabs.jsx'
+import IntermediateStudents from '../components/intermediate-pages/IntermediateStudents.jsx'
 import { studentsApi } from '../lib/sasiApi.js'
 import { usePaginatedList } from '../lib/usePaginatedList.js'
 
-export default function Students() {
+function SchoolStudents() {
   const {
     items: students,
     hasMore,
@@ -30,12 +32,10 @@ export default function Students() {
     setEditing(null)
     setFormMode('create')
   }
-
   const openEdit = (student) => {
     setEditing(student)
     setFormMode('edit')
   }
-
   const closeForm = () => {
     setFormMode(null)
     setEditing(null)
@@ -60,31 +60,25 @@ export default function Students() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Students</h1>
-          <p className="text-sm text-gray-500">
-            Manage student records across school and college streams.
-          </p>
+          <h2 className="text-lg font-semibold text-gray-900">School students</h2>
+          <p className="text-sm text-gray-500">Manage student records across school and college streams.</p>
         </div>
         <NewStudentButton onClick={openCreate} />
       </header>
 
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">All students</h2>
+          <h3 className="text-sm font-semibold text-gray-900">All students</h3>
           <span className="text-xs text-gray-500">{students.length} loaded</span>
         </div>
 
         {error ? (
           <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error.message || 'Failed to load students.'}
-            <button
-              type="button"
-              onClick={refresh}
-              className="ml-2 underline hover:no-underline"
-            >
+            <button type="button" onClick={refresh} className="ml-2 underline hover:no-underline">
               Retry
             </button>
           </div>
@@ -94,11 +88,7 @@ export default function Students() {
           <LoadingSpinner label="Loading students…" />
         ) : (
           <>
-            <StudentsTable
-              students={students}
-              onEdit={openEdit}
-              onDelete={(s) => setDeleting(s)}
-            />
+            <StudentsTable students={students} onEdit={openEdit} onDelete={(s) => setDeleting(s)} />
             {hasMore ? (
               <div className="mt-3 flex justify-center">
                 <button
@@ -130,6 +120,20 @@ export default function Students() {
         onCancel={() => setDeleting(null)}
         onConfirm={handleConfirmDelete}
       />
+    </div>
+  )
+}
+
+export default function Students() {
+  const [tab, setTab] = useState('school')
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-xl font-semibold text-gray-900">Students</h1>
+        <p className="text-sm text-gray-500">Manage school and intermediate students.</p>
+      </header>
+      <SchoolIntermediateTabs active={tab} onChange={setTab} />
+      {tab === 'school' ? <SchoolStudents /> : <IntermediateStudents />}
     </div>
   )
 }

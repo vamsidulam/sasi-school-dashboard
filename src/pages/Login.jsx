@@ -65,8 +65,12 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-brand-600 text-xl font-bold text-white">
-            S
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-lg overflow-hidden bg-white">
+            <img
+              src="/sasi-logo.png"
+              alt="SASI Logo"
+              className="h-full w-full object-contain"
+            />
           </div>
           <h1 className="text-2xl font-semibold text-gray-900">SASI Educational Institutes</h1>
           <p className="mt-1 text-sm text-gray-500">Performance Dashboard</p>

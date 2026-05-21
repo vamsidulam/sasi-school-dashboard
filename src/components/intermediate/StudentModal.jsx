@@ -95,7 +95,10 @@ export default function StudentModal({ s, computed, onClose, kind }) {
 
         <SectionTitle>Strong Topics</SectionTitle>
         {strong.length === 0 ? (
-          <div className="text-sm text-gray-500">Not enough topic-tagged data.</div>
+          <div className="py-4 text-center">
+            <div className="mb-2 text-2xl">📊</div>
+            <div className="text-xs text-gray-600">No data available</div>
+          </div>
         ) : (
           strong.map((t) => (
             <div key={t.t} className="mb-2.5 flex items-center gap-3">

@@ -1,30 +1,118 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import IntermediateHeader from './IntermediateHeader.jsx'
 import FilterBar from './FilterBar.jsx'
 import Overview from './Overview.jsx'
+import Diagnostics from './Diagnostics.jsx'
 import GrandCombined from './GrandCombined.jsx'
 import Leaderboard from './Leaderboard.jsx'
 import TopicMastery from './TopicMastery.jsx'
 import DifficultyType from './DifficultyType.jsx'
 import TestTrend from './TestTrend.jsx'
 import StudentModal from './StudentModal.jsx'
+import StudentModalApi from './StudentModalApi.jsx'
 
-import { pct, shortExam } from './utils.js'
+import { pct } from './utils.js'
+import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
 
-export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.json' }) {
+export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.json', onBack }) {
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
-  const [stream, setStream] = useState('JSP')
   const [tab, setTab] = useState('overview')
-  const [kind, setKind] = useState('GRAND')
   const [subject, setSubject] = useState('ALL')
-  const [exam, setExam] = useState('ALL')
   const [scheme, setScheme] = useState({ R: 4, W: -1, L: 0, C: 4 })
   const [sortKey, setSortKey] = useState('total')
   const [sortDir, setSortDir] = useState(-1)
   const [modal, setModal] = useState(null)
   const [search, setSearch] = useState('')
+
+  const [headerMeta, setHeaderMeta] = useState(null)
+  const [headerErr, setHeaderErr] = useState(null)
+  const [loadingHeader, setLoadingHeader] = useState(true)
+
+  const [streamid, setStreamid] = useState('')
+  const [yearid, setYearid] = useState('')
+  const [examtypeid, setExamtypeid] = useState('')
+  const [branchid, setBranchid] = useState('')
+  const [academicyearid, setAcademicyearid] = useState('')
+  const [exam, setExam] = useState('ALL')
+
+  const [overviewCounts, setOverviewCounts] = useState({ students: 0, tests: 0 })
+
+  const analyticsFilters = useMemo(
+    () => ({
+      streamid,
+      yearid,
+      examtypeid,
+      branchid: branchid || undefined,
+      academicyearid: academicyearid || undefined,
+      subject,
+      exam,
+      schemeR: scheme.R,
+      schemeW: scheme.W,
+      schemeL: scheme.L,
+      schemeC: scheme.C,
+    }),
+    [streamid, yearid, examtypeid, branchid, academicyearid, subject, exam, scheme],
+  )
+
+  const filtersReady = Boolean(streamid && yearid && examtypeid)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoadingHeader(true)
+    intAnalyticsApi
+      .headerFilters({
+        streamid: streamid || undefined,
+        yearid: yearid || undefined,
+        branchid: branchid || undefined,
+        examtypeid: examtypeid || undefined,
+        academicyearid: academicyearid || undefined,
+      })
+      .then((meta) => {
+        if (cancelled) return
+        setHeaderMeta(meta)
+        setHeaderErr(null)
+        if (!streamid && meta.streams?.length) {
+          setStreamid(meta.streams[0].id)
+        }
+        if (!yearid && meta.years?.length) {
+          setYearid(meta.years[0].id)
+        }
+        if (!examtypeid && meta.examTypes?.length) {
+          const grand = meta.examTypes.find((t) => t.name === 'GRAND')
+          setExamtypeid(grand?.id || meta.examTypes[0].id)
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) setHeaderErr(e.message)
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingHeader(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [streamid, yearid, branchid, examtypeid, academicyearid])
+
+  useEffect(() => {
+    if (!filtersReady) return
+    let cancelled = false
+    intAnalyticsApi
+      .overviewTestAverage(analyticsFilters)
+      .then((res) => {
+        if (!cancelled) {
+          setOverviewCounts({
+            students: res.students ?? 0,
+            tests: res.exams ?? res.testRecords ?? 0,
+          })
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [analyticsFilters, filtersReady])
 
   useEffect(() => {
     let cancelled = false
@@ -33,18 +121,40 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         if (!r.ok) throw new Error(`Failed to load dataset (${r.status})`)
         return r.json()
       })
-      .then((json) => { if (!cancelled) setData(json) })
-      .catch((e) => { if (!cancelled) setErr(e.message) })
-    return () => { cancelled = true }
+      .then((json) => {
+        if (!cancelled) setData(json)
+      })
+      .catch((e) => {
+        if (!cancelled) setErr(e.message)
+      })
+    return () => {
+      cancelled = true
+    }
   }, [datasetUrl])
 
-  const S = data && data.streams[stream]
-  const subjects = S ? S.subjects : []
+  const streamName = useMemo(() => {
+    const s = headerMeta?.streams?.find((x) => x.id === streamid)
+    return s?.name || ''
+  }, [headerMeta, streamid])
+
+  const S = data && streamName ? data.streams[streamName] : null
+  const subjects = useMemo(() => {
+    if (headerMeta?.subjects?.length) {
+      return headerMeta.subjects.map((s) => s.name)
+    }
+    return S ? S.subjects : []
+  }, [headerMeta, S])
+
+  const kind = useMemo(() => {
+    const t = headerMeta?.examTypes?.find((x) => x.id === examtypeid)
+    return t?.name || 'GRAND'
+  }, [headerMeta, examtypeid])
 
   useEffect(() => {
     setSubject('ALL')
     setExam('ALL')
-  }, [stream, kind])
+  }, [streamid, examtypeid])
+
   useEffect(() => {
     setExam('ALL')
   }, [subject])
@@ -61,7 +171,13 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
       recs.forEach((r) => {
         if (exam !== 'ALL' && r.exam !== exam) return
         examSet.add(r.exam)
-        let score = 0, right = 0, wrong = 0, left = 0, canc = 0, att = 0, maxQ = 0
+        let score = 0,
+          right = 0,
+          wrong = 0,
+          left = 0,
+          canc = 0,
+          att = 0,
+          maxQ = 0
         const per = {}
         Object.entries(r.resp).forEach(([q, v]) => {
           maxQ++
@@ -74,24 +190,25 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
           per[q] = { v, meta: (amap[r.exam] && amap[r.exam][q]) || null }
         })
         records.push({
-          student: r.student, exam: r.exam, subject: sub, date: r.date, mode: r.mode,
-          score, right, wrong, left, canc, att, nQ: maxQ,
-          maxMark: maxQ * Math.max(sval('R'), 1), per,
+          student: r.student,
+          exam: r.exam,
+          subject: sub,
+          date: r.date,
+          mode: r.mode,
+          score,
+          right,
+          wrong,
+          left,
+          canc,
+          att,
+          nQ: maxQ,
+          maxMark: maxQ * Math.max(sval('R'), 1),
+          per,
         })
       })
     })
     return { records, exams: [...examSet].sort() }
   }, [S, kind, subject, exam, scheme, subjects])
-
-  const examOptions = useMemo(() => {
-    if (!S) return []
-    const set = new Set()
-    const subjList = subject === 'ALL' ? subjects : [subject]
-    subjList.forEach((sub) =>
-      ((S.responses[kind] && S.responses[kind][sub]) || []).forEach((r) => set.add(r.exam)),
-    )
-    return [...set].sort()
-  }, [S, kind, subject, subjects])
 
   const leaderboard = useMemo(() => {
     if (!computed) return []
@@ -99,11 +216,28 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     computed.records.forEach((r) => {
       const k = r.student
       if (!m[k]) {
-        m[k] = { student: k, score: 0, right: 0, wrong: 0, left: 0, canc: 0, att: 0, nQ: 0, tests: 0, maxMark: 0 }
+        m[k] = {
+          student: k,
+          score: 0,
+          right: 0,
+          wrong: 0,
+          left: 0,
+          canc: 0,
+          att: 0,
+          nQ: 0,
+          tests: 0,
+          maxMark: 0,
+        }
       }
       const o = m[k]
-      o.score += r.score; o.right += r.right; o.wrong += r.wrong; o.left += r.left
-      o.canc += r.canc; o.att += r.att; o.nQ += r.nQ; o.tests++
+      o.score += r.score
+      o.right += r.right
+      o.wrong += r.wrong
+      o.left += r.left
+      o.canc += r.canc
+      o.att += r.att
+      o.nQ += r.nQ
+      o.tests++
       o.maxMark += r.maxMark
     })
     return Object.values(m).map((o) => ({
@@ -159,7 +293,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     })
     return Object.values(g)
       .map((o) => ({
-        name: shortExam(o.exam),
+        name: o.exam,
         full: o.exam,
         avg: +(o.sum / o.n).toFixed(1),
         top: o.top,
@@ -180,7 +314,8 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     const allA = leaderboard.reduce((a, b) => a + b.att, 0)
     return {
       students: leaderboard.length,
-      avg, med,
+      avg,
+      med,
       top: Math.max(...tot),
       low: Math.min(...tot),
       accuracy: pct(allR, allA),
@@ -191,49 +326,94 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
 
   function sortBy(k) {
     if (sortKey === k) setSortDir((d) => -d)
-    else { setSortKey(k); setSortDir(-1) }
+    else {
+      setSortKey(k)
+      setSortDir(-1)
+    }
   }
   const sArrow = (k) => (sortKey === k ? (sortDir < 0 ? ' ↓' : ' ↑') : '')
 
-  if (err) {
+  if (headerErr && !headerMeta) {
     return (
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="py-20 text-center">
-          <div className="mb-1 font-serif text-xl text-gray-800">Unable to load data</div>
-          <div className="text-sm text-gray-500">{err}</div>
+          <div className="mb-1 font-serif text-xl text-gray-800">Unable to load analytics</div>
+          <div className="text-sm text-gray-500">{headerErr}</div>
           <div className="mt-3 text-xs text-gray-400">
-            Make sure <span className="font-mono">offline-dataset.json</span> is served from the app's <span className="font-mono">public/</span> folder.
+            Set <span className="font-mono">VITE_INTERMEDIATE_ANALYTICS_URL</span> in{' '}
+            <span className="font-mono">.env</span> to your deployed analytics function URL.
           </div>
         </div>
       </div>
     )
   }
 
-  if (!data) {
+  if (loadingHeader && !headerMeta) {
     return (
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-col items-center justify-center gap-4 py-24">
           <div className="h-10 w-10 animate-spin rounded-full border-[3px] border-gray-200 border-t-brand-500" />
-          <div className="font-mono text-xs tracking-[0.2em] text-gray-400">LOADING ANALYTICS DATA…</div>
+          <div className="font-mono text-xs tracking-[0.2em] text-gray-400">
+            LOADING FILTERS…
+          </div>
         </div>
       </div>
     )
   }
 
-  const streams = Object.keys(data.streams)
-
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
-      <IntermediateHeader
-        streams={streams}
-        stream={stream}
-        onStreamChange={setStream}
-        kind={kind}
-        onKindChange={setKind}
+    <div className="space-y-6">
+      {/* Back Button */}
+      {onBack && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Back to Dashboard Selection
+        </button>
+      )}
+
+      {/* Title */}
+      {onBack && (
+        <div className="mb-6">
+          <h1 className="mb-2 font-serif text-3xl font-semibold text-gray-900">
+            Intermediate Dashboard
+          </h1>
+          <p className="text-sm text-gray-600">
+            Advanced analytics for competitive exam preparation
+          </p>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50 shadow-sm">
+        <IntermediateHeader
+        streams={headerMeta?.streams || []}
+        streamid={streamid}
+        onStreamChange={setStreamid}
+        examTypes={headerMeta?.examTypes || []}
+        examtypeid={examtypeid}
+        onExamTypeChange={setExamtypeid}
+        years={headerMeta?.years || []}
+        yearid={yearid}
+        onYearChange={setYearid}
+        branches={headerMeta?.branches || []}
+        branchid={branchid}
+        onBranchChange={setBranchid}
+        academicYears={headerMeta?.academicYears || []}
+        academicyearid={academicyearid}
+        onAcademicYearChange={setAcademicyearid}
+        exams={headerMeta?.exams || []}
+        exam={exam}
+        onExamChange={setExam}
         tab={tab}
         onTabChange={setTab}
-        studentsCount={summary ? summary.students : 0}
-        testsCount={summary ? summary.tests : 0}
+        studentsCount={overviewCounts.students}
+        testsCount={overviewCounts.tests}
+        loadingFilters={loadingHeader}
       />
 
       <div className="mx-auto max-w-[1480px] px-4 sm:px-6 lg:px-7">
@@ -241,64 +421,108 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
           subject={subject}
           onSubjectChange={setSubject}
           subjects={subjects}
-          exam={exam}
-          onExamChange={setExam}
-          examOptions={examOptions}
           kind={kind}
           scheme={scheme}
           onSchemeChange={setScheme}
         />
 
         <main className="pb-12 pt-4">
-          {!summary && (
-            <div className="py-16 text-center">
-              <div className="mb-1 font-serif text-xl text-gray-700">No data for this selection</div>
-              <div className="text-sm text-gray-500">Try a different stream, subject or test.</div>
+          {tab === 'overview' && (
+            <Overview
+              filters={analyticsFilters}
+              setModal={setModal}
+              ready={filtersReady}
+            />
+          )}
+
+          {tab === 'diagnostics' && (
+            <Diagnostics filters={analyticsFilters} ready={filtersReady} />
+          )}
+
+          {tab === 'leaderboard' && (
+            <Leaderboard
+              filters={analyticsFilters}
+              ready={filtersReady}
+              setModal={setModal}
+            />
+          )}
+
+          {tab === 'topics' && (
+            <TopicMastery filters={analyticsFilters} ready={filtersReady} />
+          )}
+
+          {tab === 'difficulty' && (
+            <DifficultyType filters={analyticsFilters} ready={filtersReady} />
+          )}
+
+          {tab !== 'overview' &&
+            tab !== 'leaderboard' &&
+            tab !== 'topics' &&
+            tab !== 'difficulty' &&
+            !data &&
+            !err && (
+            <div className="flex flex-col items-center justify-center gap-4 py-16">
+              <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-gray-200 border-t-brand-500" />
+              <div className="text-sm text-gray-500">Loading legacy dataset for this tab…</div>
             </div>
           )}
 
-          {summary && tab === 'overview' && (
-            <Overview
-              summary={summary}
-              trend={trend}
-              analytics={analytics}
-              ranked={ranked}
-              setModal={setModal}
-              kind={kind}
+          {tab !== 'overview' &&
+            tab !== 'leaderboard' &&
+            tab !== 'topics' &&
+            tab !== 'difficulty' &&
+            err && (
+            <div className="py-16 text-center text-sm text-gray-500">
+              Other tabs still use offline data: {err}
+            </div>
+          )}
+
+          {tab !== 'overview' &&
+            tab !== 'leaderboard' &&
+            tab !== 'topics' &&
+            tab !== 'difficulty' &&
+            tab === 'trend' && (
+            <TestTrend
+              filters={analyticsFilters}
+              ready={filtersReady}
+              useLegacyData={!filtersReady}
+              legacyTrend={trend}
             />
           )}
-          {summary && tab === 'grand' && (
-            <GrandCombined
-              S={S}
-              kind={kind}
-              scheme={scheme}
-              exam={exam}
-              setModal={setModal}
-            />
+          {tab !== 'overview' &&
+            tab !== 'leaderboard' &&
+            tab !== 'topics' &&
+            tab !== 'difficulty' &&
+            tab !== 'diagnostics' &&
+            tab !== 'trend' &&
+            data &&
+            !summary && (
+            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center">
+              <div className="mb-3 text-4xl">📊</div>
+              <div className="mb-2 font-serif text-xl font-semibold text-gray-800">
+                Select filters to view data
+              </div>
+              <div className="text-sm text-gray-600">
+                Choose stream, year, and exam type from the filters above
+              </div>
+            </div>
           )}
-          {summary && tab === 'leaderboard' && (
-            <Leaderboard
-              ranked={ranked}
-              sortBy={sortBy}
-              sArrow={sArrow}
-              search={search}
-              setSearch={setSearch}
-              setModal={setModal}
-              kind={kind}
-            />
-          )}
-          {summary && tab === 'topics' && <TopicMastery a={analytics} />}
-          {summary && tab === 'difficulty' && <DifficultyType a={analytics} />}
-          {summary && tab === 'trend' && <TestTrend trend={trend} />}
         </main>
 
         <div className="pb-6 pt-2 text-center font-mono text-[11px] tracking-[0.12em] text-gray-400">
-          SASI EDUCATIONAL INSTITUTES · OMR &amp; QUESTION-PAPER ANALYSIS · {stream} STREAM ·
-          MARKING {scheme.R}/{scheme.W}/{scheme.L}/{scheme.C}
+          SASI EDUCATIONAL INSTITUTES · OMR &amp; QUESTION-PAPER ANALYSIS ·{' '}
+          {streamName || '—'} STREAM · MARKING {scheme.R}/{scheme.W}/{scheme.L}/{scheme.C}
         </div>
       </div>
 
-      {modal && (
+      {modal && (tab === 'overview' || tab === 'leaderboard') && filtersReady && (
+        <StudentModalApi
+          studentCode={modal}
+          filters={analyticsFilters}
+          onClose={() => setModal(null)}
+        />
+      )}
+      {modal && tab !== 'overview' && tab !== 'leaderboard' && computed && (
         <StudentModal
           s={modal}
           computed={computed}
@@ -306,6 +530,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
           kind={kind}
         />
       )}
+      </div>
     </div>
   )
 }

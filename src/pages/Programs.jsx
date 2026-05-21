@@ -6,10 +6,12 @@ import ProgramFormModal from '../components/programs/ProgramFormModal.jsx'
 import SectionFormModal from '../components/programs/SectionFormModal.jsx'
 import ConfirmDeleteDialog from '../components/programs/ConfirmDeleteDialog.jsx'
 import LoadingSpinner from '../components/LoadingSpinner.jsx'
+import SchoolIntermediateTabs from '../components/common/SchoolIntermediateTabs.jsx'
+import IntermediatePrograms from '../components/intermediate-pages/IntermediatePrograms.jsx'
 import { programsApi, programSectionsApi } from '../lib/sasiApi.js'
 import { usePaginatedList } from '../lib/usePaginatedList.js'
 
-export default function Programs() {
+function SchoolPrograms() {
   const {
     items: programs,
     hasMore,
@@ -34,12 +36,10 @@ export default function Programs() {
     setEditing(null)
     setFormMode('create')
   }
-
   const openEdit = (program) => {
     setEditing(program)
     setFormMode('edit')
   }
-
   const closeForm = () => {
     setFormMode(null)
     setEditing(null)
@@ -68,28 +68,22 @@ export default function Programs() {
     setSectionOpen(true)
     setSectionFlash(null)
   }
-
   const closeSection = () => {
     setSectionOpen(false)
     setSectionInitialProgram(null)
   }
-
   const handleSectionSubmit = async (values) => {
     const created = await programSectionsApi.create(values)
-    setSectionFlash(
-      `Added section "${created.sectionAbbreviation} — ${created.sectionName}".`,
-    )
+    setSectionFlash(`Added section "${created.sectionAbbreviation} — ${created.sectionName}".`)
     closeSection()
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Programs</h1>
-          <p className="text-sm text-gray-500">
-            Manage school and college programs offered by the institution.
-          </p>
+          <h2 className="text-lg font-semibold text-gray-900">School programs</h2>
+          <p className="text-sm text-gray-500">Manage school and college programs offered by the institution.</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -106,11 +100,7 @@ export default function Programs() {
       {sectionFlash ? (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {sectionFlash}
-          <button
-            type="button"
-            onClick={() => setSectionFlash(null)}
-            className="ml-2 underline hover:no-underline"
-          >
+          <button type="button" onClick={() => setSectionFlash(null)} className="ml-2 underline hover:no-underline">
             Dismiss
           </button>
         </div>
@@ -118,18 +108,14 @@ export default function Programs() {
 
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">All programs</h2>
+          <h3 className="text-sm font-semibold text-gray-900">All programs</h3>
           <span className="text-xs text-gray-500">{programs.length} loaded</span>
         </div>
 
         {error ? (
           <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error.message || 'Failed to load programs.'}
-            <button
-              type="button"
-              onClick={refresh}
-              className="ml-2 underline hover:no-underline"
-            >
+            <button type="button" onClick={refresh} className="ml-2 underline hover:no-underline">
               Retry
             </button>
           </div>
@@ -185,6 +171,20 @@ export default function Programs() {
         onCancel={() => setDeleting(null)}
         onConfirm={handleConfirmDelete}
       />
+    </div>
+  )
+}
+
+export default function Programs() {
+  const [tab, setTab] = useState('school')
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-xl font-semibold text-gray-900">Programs</h1>
+        <p className="text-sm text-gray-500">Manage school programs and intermediate streams/years.</p>
+      </header>
+      <SchoolIntermediateTabs active={tab} onChange={setTab} />
+      {tab === 'school' ? <SchoolPrograms /> : <IntermediatePrograms />}
     </div>
   )
 }

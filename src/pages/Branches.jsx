@@ -5,10 +5,12 @@ import BranchesTable from '../components/branches/BranchesTable.jsx'
 import BranchFormModal from '../components/branches/BranchFormModal.jsx'
 import ConfirmDeleteDialog from '../components/branches/ConfirmDeleteDialog.jsx'
 import LoadingSpinner from '../components/LoadingSpinner.jsx'
+import SchoolIntermediateTabs from '../components/common/SchoolIntermediateTabs.jsx'
+import IntermediateBranches from '../components/intermediate-pages/IntermediateBranches.jsx'
 import { branchesApi } from '../lib/sasiApi.js'
 import { usePaginatedList } from '../lib/usePaginatedList.js'
 
-export default function Branches() {
+function SchoolBranches() {
   const {
     items: branches,
     hasMore,
@@ -30,12 +32,10 @@ export default function Branches() {
     setEditing(null)
     setFormMode('create')
   }
-
   const openEdit = (branch) => {
     setEditing(branch)
     setFormMode('edit')
   }
-
   const closeForm = () => {
     setFormMode(null)
     setEditing(null)
@@ -60,10 +60,10 @@ export default function Branches() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">Branches</h1>
+          <h2 className="text-lg font-semibold text-gray-900">School branches</h2>
           <p className="text-sm text-gray-500">Manage academic branches offered across programs.</p>
         </div>
         <NewBranchButton onClick={openCreate} />
@@ -71,18 +71,14 @@ export default function Branches() {
 
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-900">All branches</h2>
+          <h3 className="text-sm font-semibold text-gray-900">All branches</h3>
           <span className="text-xs text-gray-500">{branches.length} loaded</span>
         </div>
 
         {error ? (
           <div className="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error.message || 'Failed to load branches.'}
-            <button
-              type="button"
-              onClick={refresh}
-              className="ml-2 underline hover:no-underline"
-            >
+            <button type="button" onClick={refresh} className="ml-2 underline hover:no-underline">
               Retry
             </button>
           </div>
@@ -92,11 +88,7 @@ export default function Branches() {
           <LoadingSpinner label="Loading branches…" />
         ) : (
           <>
-            <BranchesTable
-              branches={branches}
-              onEdit={openEdit}
-              onDelete={(b) => setDeleting(b)}
-            />
+            <BranchesTable branches={branches} onEdit={openEdit} onDelete={(b) => setDeleting(b)} />
             {hasMore ? (
               <div className="mt-3 flex justify-center">
                 <button
@@ -128,6 +120,20 @@ export default function Branches() {
         onCancel={() => setDeleting(null)}
         onConfirm={handleConfirmDelete}
       />
+    </div>
+  )
+}
+
+export default function Branches() {
+  const [tab, setTab] = useState('school')
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-xl font-semibold text-gray-900">Branches</h1>
+        <p className="text-sm text-gray-500">Manage school and intermediate branches.</p>
+      </header>
+      <SchoolIntermediateTabs active={tab} onChange={setTab} />
+      {tab === 'school' ? <SchoolBranches /> : <IntermediateBranches />}
     </div>
   )
 }

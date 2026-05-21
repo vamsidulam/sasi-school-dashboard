@@ -22,9 +22,6 @@ export default function FilterBar({
   subject,
   onSubjectChange,
   subjects,
-  exam,
-  onExamChange,
-  examOptions,
   kind,
   scheme,
   onSchemeChange,
@@ -41,20 +38,6 @@ export default function FilterBar({
           <option value="ALL">All subjects (combined)</option>
           {subjects.map((s) => (
             <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label>Test / Exam</Label>
-        <select
-          value={exam}
-          onChange={(e) => onExamChange(e.target.value)}
-          className={`${inputClass} min-w-[280px] cursor-pointer`}
-        >
-          <option value="ALL">All {kind.toLowerCase()} tests</option>
-          {examOptions.map((e) => (
-            <option key={e} value={e}>{e}</option>
           ))}
         </select>
       </div>
