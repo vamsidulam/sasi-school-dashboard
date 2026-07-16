@@ -4,7 +4,7 @@ import { intSubjectsApi } from '../../../lib/intermediateApi.js'
 
 const empty = () => ({
   examname: '',
-  branchid: '',
+  branchid: [],
   streamid: '',
   yearid: '',
   academicyearid: '',
@@ -37,9 +37,12 @@ export default function ExamFormModal({
   useEffect(() => {
     if (open) {
       if (initial) {
+        const initBranch = initial.branchid
+          ? (Array.isArray(initial.branchid) ? initial.branchid : [initial.branchid])
+          : []
         setForm({
           examname: initial.examname || '',
-          branchid: initial.branchid || '',
+          branchid: initBranch,
           streamid: initial.streamid || '',
           yearid: initial.yearid || '',
           academicyearid: initial.academicyearid || '',
@@ -65,10 +68,10 @@ export default function ExamFormModal({
     }
   }, [open, initial])
 
-  // Refetch subjects whenever (streamid, yearid) changes
+  // Refetch subjects whenever streamid changes (subjects are mapped only to stream)
   useEffect(() => {
     if (!open) return
-    if (!form.streamid || !form.yearid) {
+    if (!form.streamid) {
       setAvailableSubjects([])
       return
     }
@@ -76,7 +79,7 @@ export default function ExamFormModal({
     setSubjectsLoading(true)
     setSubjectsError(null)
     intSubjectsApi
-      .byStreamYear({ streamid: form.streamid, yearid: form.yearid })
+      .byStreamYear({ streamid: form.streamid })
       .then((res) => {
         if (cancelled) return
         setAvailableSubjects(res.items || [])
@@ -90,7 +93,7 @@ export default function ExamFormModal({
     return () => {
       cancelled = true
     }
-  }, [open, form.streamid, form.yearid])
+  }, [open, form.streamid])
 
   // Streams and Years are global now — no upstream-filtering applied.
   const filteredStreams = streams
@@ -112,7 +115,7 @@ export default function ExamFormModal({
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.examname.trim()) return setError('Exam name is required.')
-    if (!form.branchid) return setError('Branch is required.')
+    if (!form.branchid.length) return setError('Select at least one branch.')
     if (!form.streamid) return setError('Stream is required.')
     if (!form.yearid) return setError('Year is required.')
     if (!form.academicyearid) return setError('Academic year is required.')
@@ -178,34 +181,46 @@ export default function ExamFormModal({
             Exam name <span className="text-red-600">*</span>
             <input type="text" value={form.examname} onChange={(e) => setField('examname', e.target.value)} placeholder="e.g. Weekly Test 5" className={fieldCls} autoFocus />
           </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Branch <span className="text-red-600">*</span>
-            <select
-              value={form.branchid}
-              onChange={(e) => {
-                setField('branchid', e.target.value)
-                setField('streamid', '')
-                setField('yearid', '')
-                setSubjectRows([{ subjectId: '', count: '' }])
-              }}
-              className={fieldCls}
-            >
-              <option value="">— select —</option>
-              {branches.map((b) => (
-                <option key={b.id} value={b.id}>{b.name} ({b.code})</option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-col gap-1 text-xs font-medium text-gray-700 sm:col-span-2">
+            Branches <span className="text-red-600">*</span>
+            <div className="flex flex-wrap gap-2 rounded-md border border-gray-300 bg-white p-2 min-h-[36px]">
+              {branches.map((b) => {
+                const selected = form.branchid.includes(b.id)
+                return (
+                  <button
+                    key={b.id}
+                    type="button"
+                    onClick={() => {
+                      const updated = selected
+                        ? form.branchid.filter((id) => id !== b.id)
+                        : [...form.branchid, b.id]
+                      setField('branchid', updated)
+                    }}
+                    className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                      selected
+                        ? 'bg-brand-600 text-white border-brand-600'
+                        : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-brand-300 hover:bg-brand-50'
+                    }`}
+                  >
+                    {b.name}{b.code ? ` (${b.code})` : ''}
+                  </button>
+                )
+              })}
+              {!branches.length && <span className="text-[11px] text-gray-400">No branches available</span>}
+            </div>
+            {form.branchid.length > 0 && (
+              <span className="text-[11px] text-gray-500">{form.branchid.length} branch{form.branchid.length > 1 ? 'es' : ''} selected</span>
+            )}
+          </div>
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
             Stream <span className="text-red-600">*</span>
             <select
               value={form.streamid}
               onChange={(e) => {
                 setField('streamid', e.target.value)
-                setField('yearid', '')
                 setSubjectRows([{ subjectId: '', count: '' }])
               }}
-              disabled={!form.branchid}
+              disabled={!form.branchid.length}
               className={fieldCls}
             >
               <option value="">— select —</option>
@@ -220,7 +235,6 @@ export default function ExamFormModal({
               value={form.yearid}
               onChange={(e) => {
                 setField('yearid', e.target.value)
-                setSubjectRows([{ subjectId: '', count: '' }])
               }}
               disabled={!form.streamid}
               className={fieldCls}
@@ -268,13 +282,13 @@ export default function ExamFormModal({
               <div>
                 <h3 className="text-xs font-semibold text-gray-900">Subjects &amp; question counts</h3>
                 <p className="text-[11px] text-gray-500">
-                  Pick from subjects defined for the selected stream + year. Sum should equal total questions.
+                  Pick from subjects defined for the selected stream. Sum should equal total questions.
                 </p>
               </div>
               <button
                 type="button"
                 onClick={addSubject}
-                disabled={!form.streamid || !form.yearid || !availableSubjects.length}
+                disabled={!form.streamid || !availableSubjects.length}
                 className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <Plus className="h-3 w-3" />
@@ -282,9 +296,9 @@ export default function ExamFormModal({
               </button>
             </div>
 
-            {!form.streamid || !form.yearid ? (
+            {!form.streamid ? (
               <div className="rounded border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
-                Pick a stream and year first to load available subjects.
+                Pick a stream first to load available subjects.
               </div>
             ) : subjectsLoading ? (
               <div className="flex items-center gap-2 text-[11px] text-gray-500">
@@ -297,7 +311,7 @@ export default function ExamFormModal({
               </div>
             ) : !availableSubjects.length ? (
               <div className="rounded border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-[11px] text-amber-800">
-                No subjects defined for this stream + year yet. Create them in <em>Exams → Subjects</em> first.
+                No subjects defined for this stream yet. Create them in <em>Exams → Subjects</em> first.
               </div>
             ) : (
               <div className="space-y-2">

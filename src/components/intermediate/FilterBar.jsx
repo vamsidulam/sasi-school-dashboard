@@ -51,14 +51,8 @@ export default function FilterBar({
               <input
                 type="text"
                 value={scheme[c]}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^-\d.]/g, '')
-                  onSchemeChange((prev) => ({
-                    ...prev,
-                    [c]: v === '' || v === '-' ? 0 : parseFloat(v) || 0,
-                  }))
-                }}
-                className={`${inputClass} w-16 min-w-0 text-center font-mono`}
+                readOnly
+                className={`${inputClass} w-16 min-w-0 text-center font-mono bg-gray-100 cursor-not-allowed`}
               />
             </div>
           ))}

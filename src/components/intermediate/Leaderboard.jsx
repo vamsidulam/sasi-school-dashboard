@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Search } from 'lucide-react'
 import { fmt } from './utils.js'
 import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
 
 const COLS = [
   ['rank', 'Rank'],
   ['student', 'Student Code'],
-  ['total', 'Total'],
+  ['studentName', 'Student Name'],
+  ['branchName', 'Branch'],
+  ['avg', 'Avg Score'],
   ['right', 'Right'],
   ['wrong', 'Wrong'],
   ['left', 'Left'],
   ['accuracy', 'Accuracy %'],
   ['pctMark', 'Score %'],
-  ['tests', 'Tests'],
+  ['tests', 'Exams'],
 ]
 
 const CHIP = {
@@ -34,14 +37,33 @@ export default function Leaderboard({ filters, ready, setModal }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState(null)
-  const [search, setSearch] = useState('')
-  const [sortKey, setSortKey] = useState('total')
+  const [searchInput, setSearchInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortKey, setSortKey] = useState('avg')
   const [sortDir, setSortDir] = useState(-1)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pagination, setPagination] = useState(null)
+
+  // Reset to page 1 when search query changes
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchQuery])
+
+  const handleSearch = () => {
+    setSearchQuery(searchInput.trim())
+  }
+
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSearch()
+    }
+  }
 
   useEffect(() => {
     if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
       setLoading(false)
       setItems([])
+      setPagination(null)
       return
     }
 
@@ -50,10 +72,11 @@ export default function Leaderboard({ filters, ready, setModal }) {
     setErr(null)
 
     intAnalyticsApi
-      .rankingsLeaderboard(filters)
+      .rankingsLeaderboard(filters, currentPage, 10, searchQuery)
       .then((res) => {
         if (cancelled) return
         setItems(res.items || [])
+        setPagination(res.pagination || null)
       })
       .catch((e) => {
         if (!cancelled) setErr(e.message)
@@ -65,20 +88,12 @@ export default function Leaderboard({ filters, ready, setModal }) {
     return () => {
       cancelled = true
     }
-  }, [filters, ready])
+  }, [filters, ready, currentPage, searchQuery])
 
   const ranked = useMemo(() => {
-    let a = [...items]
-    if (search.trim()) {
-      a = a.filter((x) => x.student.includes(search.trim()))
-    }
-    a.sort((x, y) => {
-      const xv = x[sortKey]
-      const yv = y[sortKey]
-      return (xv < yv ? -1 : xv > yv ? 1 : 0) * sortDir
-    })
-    return a
-  }, [items, search, sortKey, sortDir])
+    // Server-side search and pagination - just return items as-is
+    return items
+  }, [items])
 
   function sortBy(k) {
     if (sortKey === k) setSortDir((d) => -d)
@@ -88,6 +103,7 @@ export default function Leaderboard({ filters, ready, setModal }) {
     }
   }
   const sArrow = (k) => (sortKey === k ? (sortDir < 0 ? ' ↓' : ' ↑') : '')
+
 
   if (!ready) {
     return (
@@ -128,15 +144,27 @@ export default function Leaderboard({ filters, ready, setModal }) {
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
         <label className="text-sm font-semibold text-gray-700">Search Roll Number:</label>
-        <input
-          type="text"
-          placeholder="Enter roll number (e.g., 172309072)"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 max-w-xs rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
-        />
+        <div className="flex flex-1 max-w-md gap-2">
+          <input
+            type="text"
+            placeholder="Enter roll number (e.g., 172309072)"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyPress={handleSearchKeyPress}
+            className="flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/20"
+          />
+          <button
+            type="button"
+            onClick={handleSearch}
+            disabled={loading}
+            className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Search className="h-4 w-4" />
+            Search
+          </button>
+        </div>
         <span className="rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600">
-          {ranked.length} of {items.length} students
+          {pagination ? `${pagination.totalStudents} students` : `${ranked.length} students`}
         </span>
       </div>
 
@@ -169,8 +197,14 @@ export default function Leaderboard({ filters, ready, setModal }) {
                 <td className="border-b border-gray-100 px-3 py-2.5 font-mono text-gray-900">
                   {s.student}
                 </td>
+                <td className="border-b border-gray-100 px-3 py-2.5 text-gray-800">
+                  {s.studentName || '—'}
+                </td>
+                <td className="border-b border-gray-100 px-3 py-2.5 text-gray-600">
+                  {s.branchName || '—'}
+                </td>
                 <td className="border-b border-gray-100 px-3 py-2.5 font-mono font-semibold text-brand-600">
-                  {fmt(s.total)}
+                  {fmt(s.avg != null ? s.avg : s.total)}
                 </td>
                 <td className="border-b border-gray-100 px-3 py-2.5">
                   <Chip tone="g">{s.right}</Chip>
@@ -195,6 +229,62 @@ export default function Leaderboard({ filters, ready, setModal }) {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between rounded-xl border border-gray-200 bg-white px-5 py-4 shadow-sm">
+          <div className="text-sm text-gray-600">
+            Showing page {pagination.page} of {pagination.totalPages} ({pagination.totalStudents} total students)
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={!pagination.hasPrevPage}
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <div className="flex items-center gap-1">
+              {[...Array(pagination.totalPages)].map((_, i) => {
+                const pageNum = i + 1;
+                // Show first, last, current, and neighbors
+                if (
+                  pageNum === 1 ||
+                  pageNum === pagination.totalPages ||
+                  (pageNum >= pagination.page - 1 && pageNum <= pagination.page + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`min-w-[40px] rounded-md px-3 py-2 text-sm font-medium ${
+                        pageNum === pagination.page
+                          ? 'bg-brand-600 text-white'
+                          : 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                } else if (
+                  pageNum === pagination.page - 2 ||
+                  pageNum === pagination.page + 2
+                ) {
+                  return <span key={pageNum} className="px-2 text-gray-400">...</span>;
+                }
+                return null;
+              })}
+            </div>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(pagination.totalPages, p + 1))}
+              disabled={!pagination.hasNextPage}
+              className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

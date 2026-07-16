@@ -4,14 +4,11 @@ import ProtectedRoute from './components/ProtectedRoute.jsx'
 
 import Login from './pages/Login.jsx'
 import DashboardHome from './pages/DashboardHome.jsx'
-import Branches from './pages/Branches.jsx'
-import Programs from './pages/Programs.jsx'
 import Exams from './pages/Exams.jsx'
 import ExamDetail from './pages/ExamDetail.jsx'
 import Students from './pages/Students.jsx'
 import StudentDetail from './pages/StudentDetail.jsx'
-import Upload from './pages/Upload.jsx'
-import AcademicYears from './pages/AcademicYears.jsx'
+import Settings from './pages/Settings.jsx'
 import NotFound from './pages/NotFound.jsx'
 
 export default function AppRoutes() {
@@ -28,14 +25,17 @@ export default function AppRoutes() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardHome />} />
-        <Route path="branches" element={<Branches />} />
-        <Route path="programs" element={<Programs />} />
         <Route path="exams" element={<Exams />} />
         <Route path="exams/:examId" element={<ExamDetail />} />
         <Route path="students" element={<Students />} />
         <Route path="students/:studentCode" element={<StudentDetail />} />
-        <Route path="upload" element={<Upload />} />
-        <Route path="academic-years" element={<AcademicYears />} />
+        <Route path="settings" element={<Settings />} />
+
+        {/* Redirects for old routes */}
+        <Route path="branches" element={<Navigate to="/settings" replace />} />
+        <Route path="programs" element={<Navigate to="/settings" replace />} />
+        <Route path="academic-years" element={<Navigate to="/settings" replace />} />
+        <Route path="upload" element={<Navigate to="/settings" replace />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

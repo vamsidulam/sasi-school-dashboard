@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
-import SchoolCollegeToggle from './SchoolCollegeToggle.jsx'
 
-const emptyForm = () => ({ standard: '', group: '', program: '', isCollege: false })
+const emptyForm = () => ({ name: '' })
 
 const inputCls =
   'rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500'
@@ -17,10 +16,7 @@ export default function ProgramFormModal({ open, mode = 'create', initial = null
     setForm(
       initial
         ? {
-            standard: initial.standard || '',
-            group: initial.group || '',
-            program: initial.program || '',
-            isCollege: Boolean(initial.isCollege),
+            name: initial.name || '',
           }
         : emptyForm(),
     )
@@ -32,29 +28,14 @@ export default function ProgramFormModal({ open, mode = 'create', initial = null
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }))
 
-  const handleToggle = (isCollege) => {
-    setForm((f) => ({
-      ...f,
-      isCollege,
-      group: isCollege ? f.group : '',
-    }))
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.standard.trim()) return setError('Standard is required.')
-    if (!form.program.trim()) return setError('Program is required.')
-    if (form.isCollege && !form.group.trim()) {
-      return setError('Group is required for college programs.')
-    }
+    if (!form.name.trim()) return setError('Program name is required.')
     setError(null)
     setSubmitting(true)
     try {
       await onSubmit?.({
-        isCollege: form.isCollege,
-        standard: form.standard.trim(),
-        program: form.program.trim(),
-        group: form.isCollege ? form.group.trim() : null,
+        name: form.name.trim(),
       })
     } catch (err) {
       setError(err.message || 'Save failed.')
@@ -91,51 +72,19 @@ export default function ProgramFormModal({ open, mode = 'create', initial = null
         </header>
 
         <div className="space-y-4 px-5 py-4">
-          <div className="flex flex-col gap-2 text-xs font-medium text-gray-700">
-            Type
-            <SchoolCollegeToggle
-              isCollege={form.isCollege}
-              onChange={handleToggle}
-            />
-            <span className="text-[11px] font-normal text-gray-500">
-              Toggle off for school, on for college.
-            </span>
-          </div>
-
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Class / Standard
+            Program Name <span className="text-red-500">*</span>
             <input
               type="text"
-              value={form.standard}
-              onChange={(e) => setField('standard', e.target.value)}
-              placeholder={form.isCollege ? 'e.g. B.Tech, M.Tech, MBA' : 'e.g. X, XII'}
+              value={form.name}
+              onChange={(e) => setField('name', e.target.value)}
+              placeholder="e.g., State School, CBSE School, IIT Foundation"
               className={inputCls}
               autoFocus
             />
-          </label>
-
-          {form.isCollege ? (
-            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-              Group
-              <input
-                type="text"
-                value={form.group}
-                onChange={(e) => setField('group', e.target.value)}
-                placeholder="e.g. CSE, ECE, Finance"
-                className={inputCls}
-              />
-            </label>
-          ) : null}
-
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Program
-            <input
-              type="text"
-              value={form.program}
-              onChange={(e) => setField('program', e.target.value)}
-              placeholder={form.isCollege ? 'e.g. B.Tech Computer Science' : 'e.g. Class 10 - CBSE'}
-              className={inputCls}
-            />
+            <span className="text-[11px] font-normal text-gray-500">
+              Main program name (e.g., State School, CBSE School, Junior College)
+            </span>
           </label>
 
           {error ? (

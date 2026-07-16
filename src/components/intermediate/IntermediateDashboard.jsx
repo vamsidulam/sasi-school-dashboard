@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import IntermediateHeader from './IntermediateHeader.jsx'
 import FilterBar from './FilterBar.jsx'
 import Overview from './Overview.jsx'
+import BranchAnalysis from './BranchAnalysis.jsx'
 import Diagnostics from './Diagnostics.jsx'
 import GrandCombined from './GrandCombined.jsx'
 import Leaderboard from './Leaderboard.jsx'
@@ -14,8 +15,11 @@ import StudentModalApi from './StudentModalApi.jsx'
 
 import { pct } from './utils.js'
 import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { useAcademicYear } from '../../contexts/AcademicYearContext.jsx'
 
 export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.json', onBack }) {
+  const { selectedYear } = useAcademicYear()
+
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
   const [tab, setTab] = useState('overview')
@@ -34,18 +38,18 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
   const [yearid, setYearid] = useState('')
   const [examtypeid, setExamtypeid] = useState('')
   const [branchid, setBranchid] = useState('')
-  const [academicyearid, setAcademicyearid] = useState('')
+  const academicyearid = selectedYear || ''
   const [exam, setExam] = useState('ALL')
 
   const [overviewCounts, setOverviewCounts] = useState({ students: 0, tests: 0 })
 
   const analyticsFilters = useMemo(
     () => ({
-      streamid,
+      streamid: streamid && streamid !== 'ALL' ? streamid : undefined,
       yearid,
-      examtypeid,
-      branchid: branchid || undefined,
-      academicyearid: academicyearid || undefined,
+      examtypeid: examtypeid && examtypeid !== 'ALL' ? examtypeid : undefined,
+      branchid: branchid && branchid !== 'ALL' ? branchid : undefined,
+      academicyearid: academicyearid && academicyearid !== 'ALL' ? academicyearid : undefined,
       subject,
       exam,
       schemeR: scheme.R,
@@ -56,24 +60,24 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     [streamid, yearid, examtypeid, branchid, academicyearid, subject, exam, scheme],
   )
 
-  const filtersReady = Boolean(streamid && yearid && examtypeid)
+  const filtersReady = Boolean(streamid && streamid !== 'ALL' && yearid && examtypeid && examtypeid !== 'ALL')
 
   useEffect(() => {
     let cancelled = false
     setLoadingHeader(true)
     intAnalyticsApi
       .headerFilters({
-        streamid: streamid || undefined,
+        streamid: streamid && streamid !== 'ALL' ? streamid : undefined,
         yearid: yearid || undefined,
-        branchid: branchid || undefined,
-        examtypeid: examtypeid || undefined,
-        academicyearid: academicyearid || undefined,
+        branchid: branchid && branchid !== 'ALL' ? branchid : undefined,
+        examtypeid: examtypeid && examtypeid !== 'ALL' ? examtypeid : undefined,
+        academicyearid: academicyearid && academicyearid !== 'ALL' ? academicyearid : undefined,
       })
       .then((meta) => {
         if (cancelled) return
         setHeaderMeta(meta)
         setHeaderErr(null)
-        if (!streamid && meta.streams?.length) {
+        if ((!streamid || streamid === 'ALL') && meta.streams?.length) {
           setStreamid(meta.streams[0].id)
         }
         if (!yearid && meta.years?.length) {
@@ -133,8 +137,10 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
   }, [datasetUrl])
 
   const streamName = useMemo(() => {
-    const s = headerMeta?.streams?.find((x) => x.id === streamid)
-    return s?.name || ''
+    if (!streamid || streamid === 'ALL') return ''
+    const ids = streamid.includes(',') ? streamid.split(',') : [streamid]
+    const names = ids.map((id) => headerMeta?.streams?.find((x) => x.id === id)?.name).filter(Boolean)
+    return names.join(' + ') || ''
   }, [headerMeta, streamid])
 
   const S = data && streamName ? data.streams[streamName] : null
@@ -168,8 +174,12 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     subjList.forEach((sub) => {
       const recs = (S.responses[kind] && S.responses[kind][sub]) || []
       const amap = S.analysis[sub] || {}
+      const examSet2 = exam !== 'ALL' && exam.includes(',') ? new Set(exam.split(',')) : null
       recs.forEach((r) => {
-        if (exam !== 'ALL' && r.exam !== exam) return
+        if (exam !== 'ALL') {
+          if (examSet2) { if (!examSet2.has(r.exam)) return }
+          else if (r.exam !== exam) return
+        }
         examSet.add(r.exam)
         let score = 0,
           right = 0,
@@ -299,8 +309,9 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         top: o.top,
         avgPct: +pct(o.sum, o.maxAvail).toFixed(1),
         students: o.n,
+        date: o.date || '',
       }))
-      .sort((a, b) => a.full.localeCompare(b.full))
+      .sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.full.localeCompare(b.full))
   }, [computed])
 
   const summary = useMemo(() => {
@@ -381,7 +392,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
       {onBack && (
         <div className="mb-6">
           <h1 className="mb-2 font-serif text-3xl font-semibold text-gray-900">
-            Intermediate Dashboard
+            Objective Dashboard
           </h1>
           <p className="text-sm text-gray-600">
             Advanced analytics for competitive exam preparation
@@ -403,9 +414,6 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         branches={headerMeta?.branches || []}
         branchid={branchid}
         onBranchChange={setBranchid}
-        academicYears={headerMeta?.academicYears || []}
-        academicyearid={academicyearid}
-        onAcademicYearChange={setAcademicyearid}
         exams={headerMeta?.exams || []}
         exam={exam}
         onExamChange={setExam}
@@ -417,14 +425,17 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
       />
 
       <div className="mx-auto max-w-[1480px] px-4 sm:px-6 lg:px-7">
-        <FilterBar
-          subject={subject}
-          onSubjectChange={setSubject}
-          subjects={subjects}
-          kind={kind}
-          scheme={scheme}
-          onSchemeChange={setScheme}
-        />
+        {/* Hide FilterBar on diagnostics tab - diagnostics has no filters */}
+        {tab !== 'diagnostics' && (
+          <FilterBar
+            subject={subject}
+            onSubjectChange={setSubject}
+            subjects={subjects}
+            kind={kind}
+            scheme={scheme}
+            onSchemeChange={setScheme}
+          />
+        )}
 
         <main className="pb-12 pt-4">
           {tab === 'overview' && (
@@ -433,6 +444,10 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
               setModal={setModal}
               ready={filtersReady}
             />
+          )}
+
+          {tab === 'branch' && (
+            <BranchAnalysis filters={analyticsFilters} ready={filtersReady} />
           )}
 
           {tab === 'diagnostics' && (
@@ -489,24 +504,6 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
               legacyTrend={trend}
             />
           )}
-          {tab !== 'overview' &&
-            tab !== 'leaderboard' &&
-            tab !== 'topics' &&
-            tab !== 'difficulty' &&
-            tab !== 'diagnostics' &&
-            tab !== 'trend' &&
-            data &&
-            !summary && (
-            <div className="rounded-xl border border-gray-200 bg-white py-16 text-center">
-              <div className="mb-3 text-4xl">📊</div>
-              <div className="mb-2 font-serif text-xl font-semibold text-gray-800">
-                Select filters to view data
-              </div>
-              <div className="text-sm text-gray-600">
-                Choose stream, year, and exam type from the filters above
-              </div>
-            </div>
-          )}
         </main>
 
         <div className="pb-6 pt-2 text-center font-mono text-[11px] tracking-[0.12em] text-gray-400">
@@ -516,11 +513,60 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
       </div>
 
       {modal && (tab === 'overview' || tab === 'leaderboard') && filtersReady && (
-        <StudentModalApi
-          studentCode={modal}
-          filters={analyticsFilters}
-          onClose={() => setModal(null)}
-        />
+        typeof modal === 'string' ? (
+          <div
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 px-4 backdrop-blur-sm"
+            onClick={() => setModal(null)}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-4 text-center">
+                <div className="font-serif text-xl font-semibold text-gray-900">View Student Report</div>
+                <div className="mt-1 font-mono text-sm text-gray-500">{modal}</div>
+              </div>
+              <p className="mb-5 text-center text-sm text-gray-600">
+                How would you like to view this student's analysis?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModal({ code: modal, scope: 'filtered' })}
+                  className="flex-1 rounded-lg border-2 border-brand-500 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
+                >
+                  Filtered Exams Only
+                  <div className="mt-1 text-[11px] font-normal text-gray-500">Based on current header selection</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModal({ code: modal, scope: 'all' })}
+                  className="flex-1 rounded-lg border-2 border-gray-300 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
+                >
+                  All Exams
+                  <div className="mt-1 text-[11px] font-normal text-gray-500">Show all test data</div>
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModal(null)}
+                className="mt-4 w-full rounded-md border border-gray-200 py-2 text-sm text-gray-500 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        ) : (
+          <StudentModalApi
+            studentCode={modal.code}
+            filters={modal.scope === 'filtered' ? analyticsFilters : {
+              ...analyticsFilters,
+              exam: undefined,
+              subject: undefined,
+            }}
+            onClose={() => setModal(null)}
+          />
+        )
       )}
       {modal && tab !== 'overview' && tab !== 'leaderboard' && computed && (
         <StudentModal

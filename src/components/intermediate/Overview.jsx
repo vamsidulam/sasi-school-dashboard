@@ -250,24 +250,35 @@ export default function Overview({ filters, setModal, ready }) {
                   key={s.student}
                   type="button"
                   onClick={() => setModal(s.student)}
-                  className="mb-2.5 flex w-full items-center gap-3 rounded-md p-1.5 text-left transition hover:bg-brand-50"
+                  className="mb-2.5 flex w-full items-center gap-3 rounded-md p-2 text-left transition hover:bg-brand-50"
                 >
-                  <div
-                    className={`w-28 truncate font-mono text-xs ${i < 3 ? 'text-brand-600 font-semibold' : 'text-gray-600'}`}
-                  >
-                    #{s.rank} · {s.student}
+                  <div className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${i < 3 ? 'bg-brand-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                    {s.rank}
                   </div>
-                  <div className="relative h-[18px] flex-1 overflow-hidden rounded bg-gray-100">
-                    <div
-                      className={`h-full rounded ${i < 3 ? 'bg-brand-600' : 'bg-brand-300'} transition-all`}
-                      style={{
-                        width:
-                          pct(s.total, performers[0]?.total || 1) + '%',
-                      }}
-                    />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`truncate text-xs font-semibold ${i < 3 ? 'text-brand-600' : 'text-gray-800'}`}>
+                        {s.studentName || s.student}
+                      </span>
+                      {s.branchName && (
+                        <span className="flex-shrink-0 rounded bg-brand-50 px-1.5 py-0.5 text-[10px] font-medium text-brand-600">
+                          {s.branchName}
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 font-mono text-[10px] text-gray-400">{s.student}</div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+                      <div
+                        className={`h-full rounded-full ${i < 3 ? 'bg-brand-600' : 'bg-brand-300'} transition-all`}
+                        style={{ width: pct(s.avg || s.total, performers[0]?.avg || performers[0]?.total || 1) + '%' }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-14 text-right font-mono text-xs font-semibold text-gray-800">
-                    {fmt(s.total)}
+                  <div className="flex flex-col items-end gap-0.5">
+                    <div className="font-mono text-xs font-semibold text-gray-800">
+                      {fmt(s.avg != null ? s.avg : s.total)}
+                    </div>
+                    <div className="text-[10px] text-gray-400">{(s.accuracy || 0).toFixed(0)}% acc</div>
                   </div>
                 </button>
               ))}

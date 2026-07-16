@@ -1,12 +1,9 @@
 import { NavLink } from 'react-router-dom'
 import {
   BarChart3,
-  Building2,
-  GraduationCap,
   ClipboardList,
   Users,
-  Upload,
-  CalendarRange,
+  Settings,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -15,12 +12,9 @@ import { useAuth } from '../hooks/useAuth.js'
 
 const NAV = [
   { to: '/dashboard', label: 'Analysis', icon: BarChart3 },
-  { to: '/branches', label: 'Branches', icon: Building2 },
-  { to: '/programs', label: 'Programs', icon: GraduationCap },
   { to: '/exams', label: 'Exams', icon: ClipboardList },
   { to: '/students', label: 'Students', icon: Users },
-  { to: '/academic-years', label: 'Academic Years', icon: CalendarRange },
-  { to: '/upload', label: 'Upload', icon: Upload },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
 export default function Sidebar({ collapsed, onToggleCollapse }) {

@@ -15,7 +15,7 @@ export default function IntermediatePrograms() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Intermediate programs</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Objective programs</h2>
           <p className="text-sm text-gray-500">Manage streams and class years.</p>
         </div>
         <SubTabs tabs={SUB_TABS} active={sub} onChange={setSub} />

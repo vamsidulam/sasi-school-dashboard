@@ -4,7 +4,6 @@ import { X, Loader2 } from 'lucide-react'
 export default function SubjectFormModal({ open, mode = 'create', initial = null, streams = [], years = [], onClose, onSubmit }) {
   const [name, setName] = useState('')
   const [streamid, setStreamid] = useState('')
-  const [yearid, setYearid] = useState('')
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -12,7 +11,6 @@ export default function SubjectFormModal({ open, mode = 'create', initial = null
     if (open) {
       setName(initial?.name || '')
       setStreamid(initial?.streamid || '')
-      setYearid(initial?.yearid || '')
       setError(null)
       setSubmitting(false)
     }
@@ -24,11 +22,10 @@ export default function SubjectFormModal({ open, mode = 'create', initial = null
     e.preventDefault()
     if (!name.trim()) return setError('Subject name is required.')
     if (!streamid) return setError('Stream is required.')
-    if (!yearid) return setError('Year is required.')
     setError(null)
     setSubmitting(true)
     try {
-      await onSubmit?.({ name: name.trim(), streamid, yearid })
+      await onSubmit?.({ name: name.trim(), streamid })
     } catch (err) {
       setError(err.message || 'Save failed.')
     } finally {
@@ -61,15 +58,6 @@ export default function SubjectFormModal({ open, mode = 'create', initial = null
               <option value="">— select —</option>
               {streams.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Year <span className="text-red-600">*</span>
-            <select value={yearid} onChange={(e) => setYearid(e.target.value)} className={fieldCls}>
-              <option value="">— select —</option>
-              {years.map((y) => (
-                <option key={y.id} value={y.id}>{y.yearname}</option>
               ))}
             </select>
           </label>

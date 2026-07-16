@@ -11,7 +11,7 @@ export default function IntermediateStudentsUpload({ onUploaded }) {
         <div>
           <h2 className="text-base font-semibold text-gray-900">Upload Students</h2>
           <p className="text-sm text-gray-500">
-            Bulk upload student records to the intermediate-dashboard. Click below to open the
+            Bulk upload student records to the objective dashboard. Click below to open the
             upload form &mdash; you can set the sheet name, row limit, and column mappings
             there.
           </p>

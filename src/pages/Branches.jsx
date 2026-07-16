@@ -6,11 +6,12 @@ import BranchFormModal from '../components/branches/BranchFormModal.jsx'
 import ConfirmDeleteDialog from '../components/branches/ConfirmDeleteDialog.jsx'
 import LoadingSpinner from '../components/LoadingSpinner.jsx'
 import SchoolIntermediateTabs from '../components/common/SchoolIntermediateTabs.jsx'
-import IntermediateBranches from '../components/intermediate-pages/IntermediateBranches.jsx'
-import { branchesApi } from '../lib/sasiApi.js'
+import ObjectiveBranches from '../components/intermediate-pages/IntermediateBranches.jsx'
+import { branchesApi as schoolBranchesApi } from '../lib/sasiApi.js'
+import { branchesApi as intermediateBranchesApi } from '../lib/intermediateboardApi.js'
 import { usePaginatedList } from '../lib/usePaginatedList.js'
 
-function SchoolBranches() {
+function SchoolBranches({ api = schoolBranchesApi, label = 'School' }) {
   const {
     items: branches,
     hasMore,
@@ -22,7 +23,7 @@ function SchoolBranches() {
     addItem,
     replaceItem,
     removeItem,
-  } = usePaginatedList(branchesApi)
+  } = usePaginatedList(api)
 
   const [formMode, setFormMode] = useState(null)
   const [editing, setEditing] = useState(null)
@@ -43,10 +44,10 @@ function SchoolBranches() {
 
   const handleSubmit = async (values) => {
     if (formMode === 'edit' && editing) {
-      const updated = await branchesApi.update(editing.id, values)
+      const updated = await api.update(editing.id, values)
       replaceItem(editing.id, updated)
     } else {
-      const created = await branchesApi.create(values)
+      const created = await api.create(values)
       addItem(created)
     }
     closeForm()
@@ -54,7 +55,7 @@ function SchoolBranches() {
 
   const handleConfirmDelete = async () => {
     if (!deleting) return
-    await branchesApi.remove(deleting.id)
+    await api.remove(deleting.id)
     removeItem(deleting.id)
     setDeleting(null)
   }
@@ -63,7 +64,7 @@ function SchoolBranches() {
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">School branches</h2>
+          <h2 className="text-lg font-semibold text-gray-900">{label} branches</h2>
           <p className="text-sm text-gray-500">Manage academic branches offered across programs.</p>
         </div>
         <NewBranchButton onClick={openCreate} />
@@ -128,12 +129,14 @@ export default function Branches() {
   const [tab, setTab] = useState('school')
   return (
     <div className="space-y-6">
-      <header>
+      {/* <header>
         <h1 className="text-xl font-semibold text-gray-900">Branches</h1>
-        <p className="text-sm text-gray-500">Manage school and intermediate branches.</p>
-      </header>
+        <p className="text-sm text-gray-500">Manage school, intermediate, and objective branches.</p>
+      </header> */}
       <SchoolIntermediateTabs active={tab} onChange={setTab} />
-      {tab === 'school' ? <SchoolBranches /> : <IntermediateBranches />}
+      {tab === 'school' && <SchoolBranches api={schoolBranchesApi} label="School" />}
+      {tab === 'intermediate' && <SchoolBranches api={intermediateBranchesApi} label="Intermediate" />}
+      {tab === 'objective' && <ObjectiveBranches />}
     </div>
   )
 }

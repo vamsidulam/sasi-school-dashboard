@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Pencil, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import LoadingSpinner from '../../LoadingSpinner.jsx'
 import ConfirmDeleteDialog from '../../common/ConfirmDeleteDialog.jsx'
 import SubjectFormModal from './SubjectFormModal.jsx'
@@ -12,16 +12,22 @@ export default function SubjectsPanel() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const [cursor, setCursor] = useState(null)
+  const [hasMore, setHasMore] = useState(false)
+  const [cursorStack, setCursorStack] = useState([])
+
   const [formMode, setFormMode] = useState(null)
   const [editing, setEditing] = useState(null)
   const [deleting, setDeleting] = useState(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (currentCursor = null) => {
     setLoading(true)
     setError(null)
     try {
-      const res = await intSubjectsApi.list()
+      const res = await intSubjectsApi.list({ cursor: currentCursor })
       setItems(res.items || [])
+      setHasMore(res.hasMore || false)
+      setCursor(res.nextCursor || null)
     } catch (err) {
       setError(err)
     } finally {
@@ -34,6 +40,24 @@ export default function SubjectsPanel() {
     intStreamsApi.listAll().then((res) => setStreams(res.items || [])).catch(() => {})
     intYearsApi.listAll().then((res) => setYears(res.items || [])).catch(() => {})
   }, [load])
+
+  const handleNextPage = () => {
+    if (!hasMore || !cursor) return
+    setCursorStack((prev) => [...prev, items[0]?.id || null])
+    load(cursor)
+  }
+
+  const handlePrevPage = () => {
+    if (cursorStack.length === 0) return
+    const newStack = [...cursorStack]
+    const prevCursor = newStack.pop()
+    setCursorStack(newStack)
+    if (newStack.length === 0) {
+      load(null)
+    } else {
+      load(prevCursor)
+    }
+  }
 
   const lookup = (list, id) => list.find((x) => x.id === id)
 
@@ -60,7 +84,7 @@ export default function SubjectsPanel() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm text-gray-500">
-          Subjects belong to a (stream × year) pair.
+          Subjects are mapped to streams only.
         </p>
         <button
           type="button"
@@ -88,54 +112,81 @@ export default function SubjectsPanel() {
           No subjects yet.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-50">
-              <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                <th className="px-3 py-2">Name</th>
-                <th className="px-3 py-2">Stream</th>
-                <th className="px-3 py-2">Year</th>
-                <th className="px-3 py-2 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {items.map((sub) => {
-                const s = lookup(streams, sub.streamid)
-                const y = lookup(years, sub.yearid)
-                return (
-                  <tr key={sub.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50">
-                    <td className="px-3 py-2 font-medium text-gray-900 capitalize">{sub.name}</td>
-                    <td className="px-3 py-2 text-gray-700">{s ? s.name : '—'}</td>
-                    <td className="px-3 py-2 text-gray-700">{y ? y.yearname : '—'}</td>
-                    <td className="px-3 py-2">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setEditing(sub)
-                            setFormMode('edit')
-                          }}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleting(sub)}
-                          className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-50">
+                <tr className="text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Stream</th>
+                  <th className="px-3 py-2 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {items.map((sub) => {
+                  const s = lookup(streams, sub.streamid)
+                  return (
+                    <tr key={sub.id} className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50">
+                      <td className="px-3 py-2 font-medium text-gray-900 capitalize">{sub.name}</td>
+                      <td className="px-3 py-2 text-gray-700">{s ? s.name : '—'}</td>
+                      <td className="px-3 py-2">
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditing(sub)
+                              setFormMode('edit')
+                            }}
+                            className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleting(sub)}
+                            className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+            <p className="text-sm text-gray-700">
+              Showing <span className="font-medium">{items.length}</span> subjects per page
+            </p>
+            <nav className="inline-flex -space-x-px rounded-md shadow-sm">
+              <button
+                type="button"
+                onClick={handlePrevPage}
+                disabled={cursorStack.length === 0}
+                className="relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <span className="relative inline-flex items-center border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700">
+                Page {cursorStack.length + 1}
+              </span>
+              <button
+                type="button"
+                onClick={handleNextPage}
+                disabled={!hasMore}
+                className="relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </nav>
+          </div>
+        </>
       )}
 
       <SubjectFormModal

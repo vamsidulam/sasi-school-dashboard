@@ -1,9 +1,10 @@
-import { Users, FileBarChart2, ListChecks } from 'lucide-react'
+import { Users, FileBarChart2, ListChecks, FolderTree } from 'lucide-react'
 
 const TABS = [
   { key: 'students', label: 'Students', icon: Users },
   { key: 'examresults', label: 'Exam Results', icon: FileBarChart2 },
-  { key: 'topics', label: 'Question Topics', icon: ListChecks },
+  { key: 'examquestiontopics', label: 'Question Topics', icon: ListChecks },
+  { key: 'topicssubtopics', label: 'Topics & Subtopics', icon: FolderTree },
 ]
 
 export default function IntermediateUploadTabs({ active, onChange }) {

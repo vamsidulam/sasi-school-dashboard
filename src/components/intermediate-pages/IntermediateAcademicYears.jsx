@@ -66,7 +66,7 @@ export default function IntermediateAcademicYears() {
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Intermediate academic years</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Objective academic years</h2>
           <p className="text-sm text-gray-500">
             Global academic year ranges (e.g. 2024-2026). Name must be unique.
           </p>

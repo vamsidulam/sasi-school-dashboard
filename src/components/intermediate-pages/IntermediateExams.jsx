@@ -4,6 +4,7 @@ import SubTabs from '../common/SubTabs.jsx'
 import ExamsPanel from './exams/ExamsPanel.jsx'
 import SubjectsPanel from './exams/SubjectsPanel.jsx'
 import ExamTypesPanel from './exams/ExamTypesPanel.jsx'
+import { useAcademicYear } from '../../contexts/AcademicYearContext.jsx'
 
 const SUB_TABS = [
   { key: 'exams', label: 'Exams', icon: ClipboardList },
@@ -13,17 +14,19 @@ const SUB_TABS = [
 
 export default function IntermediateExams() {
   const [sub, setSub] = useState('exams')
+  const { selectedYear } = useAcademicYear()
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Intermediate exams</h2>
+          <h2 className="text-lg font-semibold text-gray-900">Objective exams</h2>
           <p className="text-sm text-gray-500">Manage exams, subjects, and exam types.</p>
         </div>
         <SubTabs tabs={SUB_TABS} active={sub} onChange={setSub} />
       </div>
       <section className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-        {sub === 'exams' ? <ExamsPanel /> : null}
+        {sub === 'exams' ? <ExamsPanel academicyearid={selectedYear} /> : null}
         {sub === 'subjects' ? <SubjectsPanel /> : null}
         {sub === 'examtypes' ? <ExamTypesPanel /> : null}
       </section>

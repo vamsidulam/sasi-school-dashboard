@@ -41,7 +41,10 @@ export default function TestTrend({ filters, ready, useLegacyData = false, legac
     ])
       .then(([trendRes, summaryRes]) => {
         if (cancelled) return
-        setTrendData(trendRes.trend || [])
+        const sorted = (trendRes.trend || []).slice().sort(
+          (a, b) => (a.date || '').localeCompare(b.date || '') || (a.name || '').localeCompare(b.name || '')
+        )
+        setTrendData(sorted)
         setSummary(summaryRes)
       })
       .catch((err) => {

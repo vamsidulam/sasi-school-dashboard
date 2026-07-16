@@ -10,6 +10,7 @@ import {
   intExamsApi,
   intSubjectsApi,
 } from '../../lib/intermediateApi.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 // Global column mappings (apply across all subjects since they share the
 // same column layout in the workbook).
@@ -39,6 +40,7 @@ function buildSubjectConfig(examSubjects) {
 }
 
 export default function IntermediateExamQuestionTopicsUploadModal({ open, onClose, onUploaded }) {
+  const { user } = useAuth()
   const [branchId, setBranchId] = useState('')
   const [streamId, setStreamId] = useState('')
   const [yearId, setYearId] = useState('')
@@ -102,7 +104,7 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
     let cancelled = false
     setLoadingFilters(true)
     intExamsApi
-      .list({
+      .listAll({
         branchid: branchId || undefined,
         streamid: streamId || undefined,
         yearid: yearId || undefined,
@@ -120,18 +122,19 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
     [exams, examId],
   )
 
-  // Load subject names for the selected exam so we can show them in Step 3
   useEffect(() => {
     if (!selectedExam) {
       setSubjectsById({})
       return
     }
     let cancelled = false
+    const subjectIds = Object.keys(selectedExam.subjects || {})
+    if (!subjectIds.length) {
+      setSubjectsById({})
+      return
+    }
     intSubjectsApi
-      .byStreamYear({
-        streamid: selectedExam.streamid,
-        yearid: selectedExam.yearid,
-      })
+      .byIds(subjectIds)
       .then((res) => {
         if (cancelled) return
         const map = {}
@@ -258,6 +261,7 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
         examid: selectedExam.id,
         fileName: file.name,
         rows,
+        uploadedBy: user?.email || null,
       })
 
       setResult({ ...response, extractWarnings })
@@ -563,6 +567,34 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
                   Skipped — in-file dups: {result.skipped.inFile ?? 0} · invalid:{' '}
                   {result.skipped.invalid ?? 0} · subject not found:{' '}
                   {result.skipped.subjectNotFound ?? 0}
+                  {result.skipped.topicNotFound > 0 ? (
+                    <> · topic not found: {result.skipped.topicNotFound}</>
+                  ) : null}
+                  {result.skipped.subtopicNotFound > 0 ? (
+                    <> · subtopic not found: {result.skipped.subtopicNotFound}</>
+                  ) : null}
+                </div>
+              ) : null}
+              {(result.missingTopics?.length > 0 || result.missingSubtopics?.length > 0) ? (
+                <div className="rounded border border-red-200 bg-red-50 px-2.5 py-2 text-xs text-red-800">
+                  <div className="font-semibold mb-1">⚠️ Missing Topics/Subtopics</div>
+                  {result.missingTopics?.length > 0 ? (
+                    <div className="mb-2">
+                      <span className="font-medium">Topics ({result.missingTopics.length}):</span>{' '}
+                      {result.missingTopics.slice(0, 10).join(', ')}
+                      {result.missingTopics.length > 10 ? ', ...' : ''}
+                    </div>
+                  ) : null}
+                  {result.missingSubtopics?.length > 0 ? (
+                    <div>
+                      <span className="font-medium">Subtopics ({result.missingSubtopics.length}):</span>{' '}
+                      {result.missingSubtopics.slice(0, 10).join(', ')}
+                      {result.missingSubtopics.length > 10 ? ', ...' : ''}
+                    </div>
+                  ) : null}
+                  <div className="mt-2 font-medium">
+                    → Please upload these topics/subtopics first, then re-upload this file.
+                  </div>
                 </div>
               ) : null}
               {result.warnings?.length ? (

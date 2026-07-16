@@ -1,15 +1,11 @@
-import { School, GraduationCap } from 'lucide-react'
+import { School, BookOpen, Award } from 'lucide-react'
 
 const TABS = [
   { key: 'school', label: 'School', icon: School },
-  { key: 'intermediate', label: 'Intermediate', icon: GraduationCap },
+  { key: 'intermediate', label: 'Intermediate', icon: BookOpen },
+  { key: 'objective', label: 'Objective', icon: Award },
 ]
 
-/**
- * Top-level School / Intermediate tab switcher used across entity pages.
- *   active   — 'school' | 'intermediate'
- *   onChange — (key) => void
- */
 export default function SchoolIntermediateTabs({ active, onChange }) {
   return (
     <div className="flex flex-wrap gap-1 rounded-md border border-gray-200 bg-white p-1 shadow-sm">

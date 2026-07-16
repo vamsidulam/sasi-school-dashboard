@@ -1,12 +1,12 @@
 {
   "projects": {
-    "default": "anveshana-18084"
+    "default": "kumuda-d2c11"
   },
   "targets": {
-    "anveshana-18084": {
+    "kumuda-d2c11": {
       "hosting": {
-        "dashboard": [
-          "sasi-school-dashboard"
+        "sasi": [
+          "sasidashboards"
         ]
       }
     }

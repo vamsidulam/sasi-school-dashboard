@@ -14,7 +14,7 @@ export default function TopStudentsTable({
           <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-gray-500">
             <th className="w-10 px-3 py-2 text-right">#</th>
             <th className="px-3 py-2">Branch</th>
-            <th className="px-3 py-2">Code</th>
+            <th className="px-3 py-2">Roll No</th>
             <th className="px-3 py-2">Name</th>
             <th className="px-3 py-2 text-right">{valueLabel}</th>
           </tr>
@@ -22,7 +22,7 @@ export default function TopStudentsTable({
         <tbody className="divide-y divide-gray-100">
           {rows.map((row, i) => (
             <tr
-              key={`${row.code}-${i}`}
+              key={`${row.studentId || row.rollNo}-${i}`}
               className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50"
             >
               <td className="px-3 py-1.5 text-right tabular-nums font-medium text-gray-900">
@@ -33,7 +33,7 @@ export default function TopStudentsTable({
                   {row.branch}
                 </span>
               </td>
-              <td className="px-3 py-1.5 font-mono text-xs text-gray-600">{row.code}</td>
+              <td className="px-3 py-1.5 font-mono text-xs text-gray-600">{row.rollNo || '—'}</td>
               <td className="px-3 py-1.5 text-gray-800">{row.name}</td>
               <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-emerald-700">
                 {valueFormatter(row.value)}

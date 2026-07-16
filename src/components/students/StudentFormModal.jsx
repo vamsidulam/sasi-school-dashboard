@@ -2,17 +2,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import SchoolCollegeToggle from '../programs/SchoolCollegeToggle.jsx'
 import {
-  programsApi,
-  branchesApi,
-  programSectionsApi,
-  fetchAll,
+  programsApi as defaultProgramsApi,
+  branchesApi as defaultBranchesApi,
+  programSectionsApi as defaultProgramSectionsApi,
+  academicYearsApi as defaultAcademicYearsApi,
+  fetchAll as defaultFetchAll,
 } from '../../lib/sasiApi.js'
-
-const currentYear = new Date().getFullYear()
 
 const emptyForm = () => ({
   name: '',
-  joiningYear: String(currentYear),
+  academicYearId: '',
   programId: '',
   programQuery: '',
   sectionId: '',
@@ -35,13 +34,14 @@ function sectionLabel(s) {
     : s.sectionName || ''
 }
 
-export default function StudentFormModal({ open, mode = 'create', initial = null, onClose, onSubmit }) {
+export default function StudentFormModal({ open, mode = 'create', initial = null, onClose, onSubmit, programsApiRef, branchesApiRef, programSectionsApiRef, academicYearsApiRef, fetchAllFn }) {
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [programOptions, setProgramOptions] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
   const [sectionOptions, setSectionOptions] = useState([])
+  const [academicYearOptions, setAcademicYearOptions] = useState([])
   const [optionsLoading, setOptionsLoading] = useState(false)
   const [programOpen, setProgramOpen] = useState(false)
   const [branchOpen, setBranchOpen] = useState(false)
@@ -51,16 +51,23 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
     if (!open) return
     let cancelled = false
     setOptionsLoading(true)
+    const _fetchAll = fetchAllFn || defaultFetchAll
+    const _programsApi = programsApiRef || defaultProgramsApi
+    const _branchesApi = branchesApiRef || defaultBranchesApi
+    const _programSectionsApi = programSectionsApiRef || defaultProgramSectionsApi
+    const _academicYearsApi = academicYearsApiRef || defaultAcademicYearsApi
     Promise.all([
-      fetchAll(programsApi),
-      fetchAll(branchesApi),
-      fetchAll(programSectionsApi),
+      _fetchAll(_programsApi),
+      _fetchAll(_branchesApi),
+      _fetchAll(_programSectionsApi),
+      _fetchAll(_academicYearsApi),
     ])
-      .then(([progs, brs, secs]) => {
+      .then(([progs, brs, secs, ays]) => {
         if (cancelled) return
         setProgramOptions(progs)
         setBranchOptions(brs)
         setSectionOptions(secs)
+        setAcademicYearOptions(ays)
       })
       .catch((err) => {
         if (!cancelled) console.warn('[StudentFormModal] failed to load options:', err.message)
@@ -83,7 +90,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
     }
     const prog =
       programOptions.find((p) => p.id === initial.programId) ||
-      programOptions.find((p) => p.program === initial.program)
+      programOptions.find((p) => (p.program || p.name) === initial.program)
     const branch =
       branchOptions.find((b) => b.id === initial.branchId) ||
       branchOptions.find((b) => b.name === initial.branch) ||
@@ -91,9 +98,9 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
     const section = sectionOptions.find((s) => s.id === initial.sectionId)
     setForm({
       name: initial.name || '',
-      joiningYear: String(initial.joiningYear ?? currentYear),
+      academicYearId: initial.academicYearId || '',
       programId: prog?.id || '',
-      programQuery: prog?.program || initial.program || '',
+      programQuery: prog?.program || prog?.name || initial.program || '',
       sectionId: section?.id || '',
       sectionQuery: section ? sectionLabel(section) : '',
       isCollege: Boolean(initial.isCollege),
@@ -108,15 +115,15 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
   }, [open, initial, programOptions, branchOptions, sectionOptions])
 
   const programMatches = useMemo(() => {
-    const q = form.programQuery.trim().toLowerCase()
+    const q = (form.programQuery || '').trim().toLowerCase()
     if (!q) return programOptions.slice(0, 8)
     return programOptions
-      .filter((p) => (p.program || '').toLowerCase().includes(q))
+      .filter((p) => (p.program || p.name || '').toLowerCase().includes(q))
       .slice(0, 8)
   }, [form.programQuery, programOptions])
 
   const branchMatches = useMemo(() => {
-    const q = form.branchQuery.trim().toLowerCase()
+    const q = (form.branchQuery || '').trim().toLowerCase()
     if (!q) return branchOptions.slice(0, 8)
     return branchOptions
       .filter(
@@ -128,7 +135,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
   }, [form.branchQuery, branchOptions])
 
   const sectionMatches = useMemo(() => {
-    const q = form.sectionQuery.trim().toLowerCase()
+    const q = (form.sectionQuery || '').trim().toLowerCase()
     if (!q) return sectionOptions.slice(0, 8)
     return sectionOptions
       .filter(
@@ -143,7 +150,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
 
   const handleProgramInput = (val) => {
     const match = programOptions.find(
-      (p) => (p.program || '').toLowerCase() === val.trim().toLowerCase(),
+      (p) => (p.program || p.name || '').toLowerCase() === (val || '').trim().toLowerCase(),
     )
     setForm((f) => ({
       ...f,
@@ -155,7 +162,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
   const selectProgram = (p) => {
     setForm((f) => ({
       ...f,
-      programQuery: p.program,
+      programQuery: p.program || p.name,
       programId: p.id,
     }))
     setProgramOpen(false)
@@ -163,7 +170,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
 
   const handleSectionInput = (val) => {
     const match = sectionOptions.find(
-      (s) => sectionLabel(s).toLowerCase() === val.trim().toLowerCase(),
+      (s) => sectionLabel(s).toLowerCase() === (val || '').trim().toLowerCase(),
     )
     if (match) {
       const linkedProg = programOptions.find((p) => p.id === match.programId)
@@ -172,7 +179,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
         sectionQuery: val,
         sectionId: match.id,
         programId: linkedProg?.id || match.programId || f.programId,
-        programQuery: linkedProg?.program || f.programQuery,
+        programQuery: linkedProg?.program || linkedProg?.name || f.programQuery,
       }))
     } else {
       setForm((f) => ({ ...f, sectionQuery: val, sectionId: '' }))
@@ -186,14 +193,14 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
       sectionQuery: sectionLabel(s),
       sectionId: s.id,
       programId: linkedProg?.id || s.programId || f.programId,
-      programQuery: linkedProg?.program || f.programQuery,
+      programQuery: linkedProg?.program || linkedProg?.name || f.programQuery,
     }))
     setSectionOpen(false)
   }
 
   const handleBranchInput = (val) => {
     const match = branchOptions.find(
-      (b) => (b.name || '').toLowerCase() === val.trim().toLowerCase(),
+      (b) => (b.name || '').toLowerCase() === (val || '').trim().toLowerCase(),
     )
     setForm((f) => ({
       ...f,
@@ -213,12 +220,11 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
     e.preventDefault()
     if (!form.name.trim()) return setError('Name is required.')
     if (!form.rollNo.trim()) return setError('Roll no is required.')
-    if (!form.programId) return setError('Please select a program from the list.')
     if (!form.branchId) return setError('Please select a branch from the list.')
-    const year = Number(form.joiningYear)
-    if (!Number.isInteger(year) || year < 1900 || year > 2100) {
-      return setError('Joining year must be a valid year.')
-    }
+    if (!form.programId) return setError('Please select a program from the list.')
+    if (!form.sectionId) return setError('Please select a section from the list.')
+    if (!form.parentName.trim()) return setError('Parent name is required.')
+    if (!form.parentPhone.trim()) return setError('Parent phone is required.')
     setError(null)
     setSubmitting(true)
     try {
@@ -229,7 +235,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
         branchId: form.branchId,
         sectionId: form.sectionId || null,
         isCollege: form.isCollege,
-        joiningYear: year,
+        academicYearId: form.academicYearId || null,
         parentName: form.parentName.trim(),
         parentPhone: form.parentPhone.trim(),
       })
@@ -282,16 +288,17 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
             </label>
 
             <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-              Joining year
-              <input
-                type="number"
-                min="1900"
-                max="2100"
-                value={form.joiningYear}
-                onChange={(e) => setField('joiningYear', e.target.value)}
-                placeholder="e.g. 2025"
+              Academic Year
+              <select
+                value={form.academicYearId}
+                onChange={(e) => setField('academicYearId', e.target.value)}
                 className={inputCls}
-              />
+              >
+                <option value="">— none —</option>
+                {academicYearOptions.map((ay) => (
+                  <option key={ay.id} value={ay.id}>{ay.name || ay.id}</option>
+                ))}
+              </select>
             </label>
 
             <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
@@ -324,7 +331,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
                             className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-brand-50"
                           >
                             <span className="text-gray-900">{sectionLabel(s)}</span>
-                            <span className="text-[11px] text-gray-500">{linked?.program || ''}</span>
+                            <span className="text-[11px] text-gray-500">{linked?.program || linked?.name || ''}</span>
                           </button>
                         </li>
                       )
@@ -364,7 +371,7 @@ export default function StudentFormModal({ open, mode = 'create', initial = null
                           }}
                           className="flex w-full items-center px-2.5 py-1.5 text-left text-sm text-gray-900 hover:bg-brand-50"
                         >
-                          {p.program}
+                          {p.program || p.name}
                         </button>
                       </li>
                     ))}

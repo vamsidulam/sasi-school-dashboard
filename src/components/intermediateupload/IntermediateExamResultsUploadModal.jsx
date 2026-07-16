@@ -10,6 +10,7 @@ import {
   intExamsApi,
   intSubjectsApi,
 } from '../../lib/intermediateApi.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 function emptyQuestionMap(count) {
   const out = {}
@@ -56,6 +57,7 @@ function buildSubjectMapping(subjects) {
 }
 
 export default function IntermediateExamResultsUploadModal({ open, onClose, onUploaded }) {
+  const { user } = useAuth()
   const [branchId, setBranchId] = useState('')
   const [streamId, setStreamId] = useState('')
   const [yearId, setYearId] = useState('')
@@ -127,7 +129,7 @@ export default function IntermediateExamResultsUploadModal({ open, onClose, onUp
     let cancelled = false
     setLoadingFilters(true)
     intExamsApi
-      .list({
+      .listAll({
         branchid: branchId || undefined,
         streamid: streamId || undefined,
         yearid: yearId || undefined,
@@ -168,19 +170,19 @@ export default function IntermediateExamResultsUploadModal({ open, onClose, onUp
     }
   }, [open])
 
-  // When an exam is selected, fetch the subject docs so we can show their names
-  // in Step 3 instead of raw IDs.
   useEffect(() => {
     if (!selectedExam) {
       setSubjectsById({})
       return
     }
     let cancelled = false
+    const subjectIds = Object.keys(selectedExam.subjects || {})
+    if (!subjectIds.length) {
+      setSubjectsById({})
+      return
+    }
     intSubjectsApi
-      .byStreamYear({
-        streamid: selectedExam.streamid,
-        yearid: selectedExam.yearid,
-      })
+      .byIds(subjectIds)
       .then((res) => {
         if (cancelled) return
         const map = {}
@@ -344,12 +346,13 @@ export default function IntermediateExamResultsUploadModal({ open, onClose, onUp
 
       const payload = {
         examid: selectedExam.id,
-        branchid: selectedExam.branchid,
+        branchid: branchId,
         streamid: selectedExam.streamid,
         yearid: selectedExam.yearid,
         academicyearid: selectedExam.academicyearid,
         fileName: file.name,
         results,
+        uploadedBy: user?.email || null,
       }
 
       const response = await intUploadApi.examResults(payload)

@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "target": "dashboard",
+    "target": "sasi",
     "public": "dist",
     "ignore": [
       "firebase.json",

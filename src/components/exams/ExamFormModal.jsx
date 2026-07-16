@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import BranchesInput from './BranchesInput.jsx'
-import ProgramAutocomplete from './ProgramAutocomplete.jsx'
-import { EXAM_TYPES } from './dummyExams.js'
-import { programsApi, branchesApi, fetchAll } from '../../lib/sasiApi.js'
+import { programsApi as defaultProgramsApi, branchesApi as defaultBranchesApi, academicYearsApi as defaultAcademicYearsApi, fetchAll as defaultFetchAll } from '../../lib/sasiApi.js'
 
 const emptyForm = () => ({
   name: '',
-  programName: '',
+  programId: '',
+  academicYearId: '',
   branches: [],
-  maxMarks: '',
-  type: EXAM_TYPES[0],
 })
 
-export default function ExamFormModal({ open, mode = 'create', initial = null, onClose, onSubmit }) {
+export default function ExamFormModal({ open, mode = 'create', initial = null, onClose, onSubmit, programsApiRef, branchesApiRef, academicYearsApiRef, fetchAllFn }) {
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
   const [programOptions, setProgramOptions] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
+  const [academicYearOptions, setAcademicYearOptions] = useState([])
   const [optionsLoading, setOptionsLoading] = useState(false)
 
   useEffect(() => {
@@ -26,11 +24,10 @@ export default function ExamFormModal({ open, mode = 'create', initial = null, o
       setForm(
         initial
           ? {
-              name: initial.name,
-              programName: initial.programName,
+              name: initial.name || '',
+              programId: initial.programId || '',
+              academicYearId: initial.academicYearId || '',
               branches: [...(initial.branches || [])],
-              maxMarks: String(initial.maxMarks ?? ''),
-              type: initial.type || EXAM_TYPES[0],
             }
           : emptyForm(),
       )
@@ -43,11 +40,16 @@ export default function ExamFormModal({ open, mode = 'create', initial = null, o
     if (!open) return
     let cancelled = false
     setOptionsLoading(true)
-    Promise.all([fetchAll(programsApi), fetchAll(branchesApi)])
-      .then(([progs, brs]) => {
+    const _fetchAll = fetchAllFn || defaultFetchAll
+    const _programsApi = programsApiRef || defaultProgramsApi
+    const _branchesApi = branchesApiRef || defaultBranchesApi
+    const _academicYearsApi = academicYearsApiRef || defaultAcademicYearsApi
+    Promise.all([_fetchAll(_programsApi), _fetchAll(_branchesApi), _academicYearsApi.listAll()])
+      .then(([progs, brs, ayRes]) => {
         if (cancelled) return
         setProgramOptions(progs)
         setBranchOptions(brs)
+        setAcademicYearOptions(ayRes.items || [])
       })
       .catch((err) => {
         if (cancelled) return
@@ -59,7 +61,7 @@ export default function ExamFormModal({ open, mode = 'create', initial = null, o
     return () => {
       cancelled = true
     }
-  }, [open])
+  }, [open, programsApiRef, branchesApiRef, academicYearsApiRef, fetchAllFn])
 
   if (!open) return null
 
@@ -68,21 +70,17 @@ export default function ExamFormModal({ open, mode = 'create', initial = null, o
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!form.name.trim()) return setError('Exam name is required.')
-    if (!form.programName.trim()) return setError('Program name is required.')
+    if (!form.programId) return setError('Program is required.')
+    if (!form.academicYearId) return setError('Academic year is required.')
     if (!form.branches.length) return setError('Add at least one branch.')
-    const marks = Number(form.maxMarks)
-    if (!Number.isFinite(marks) || marks <= 0) {
-      return setError('Max marks must be a positive number.')
-    }
     setError(null)
     setSubmitting(true)
     try {
       await onSubmit?.({
         name: form.name.trim(),
-        programName: form.programName.trim(),
+        programId: form.programId,
+        academicYearId: form.academicYearId,
         branches: form.branches,
-        maxMarks: marks,
-        type: form.type,
       })
     } catch (err) {
       setError(err.message || 'Save failed.')
@@ -120,34 +118,47 @@ export default function ExamFormModal({ open, mode = 'create', initial = null, o
 
         <div className="space-y-4 overflow-y-auto px-5 py-4">
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Exam name
+            Exam Name <span className="text-red-500">*</span>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setField('name', e.target.value)}
-              placeholder="e.g. Mid Sem 1 - DSA"
+              placeholder="e.g. Mid Term, Final Exam"
               className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               autoFocus
             />
           </label>
 
           <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Program name
-            <ProgramAutocomplete
-              value={form.programName}
-              onChange={(v) => setField('programName', v)}
-              programs={programOptions}
-              loading={optionsLoading}
-            />
-            <span className="text-[11px] font-normal text-gray-500">
-              {optionsLoading
-                ? 'Loading programs…'
-                : 'Type to search; click a suggestion to fill the field.'}
-            </span>
+            Program <span className="text-red-500">*</span>
+            <select
+              value={form.programId}
+              onChange={(e) => setField('programId', e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="">{optionsLoading ? 'Loading…' : 'Select program...'}</option>
+              {programOptions.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
           </div>
 
           <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Branches
+            Academic Year <span className="text-red-500">*</span>
+            <select
+              value={form.academicYearId}
+              onChange={(e) => setField('academicYearId', e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+            >
+              <option value="">{optionsLoading ? 'Loading…' : 'Select academic year...'}</option>
+              {academicYearOptions.map((ay) => (
+                <option key={ay.id} value={ay.id}>{ay.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
+            Branches <span className="text-red-500">*</span>
             <BranchesInput
               branches={form.branches}
               onChange={(branches) => setField('branches', branches)}
@@ -158,35 +169,6 @@ export default function ExamFormModal({ open, mode = 'create', initial = null, o
                 ? 'Loading branches…'
                 : 'Type to search and click a suggestion, or press Enter to add custom. × to remove.'}
             </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-              Max marks
-              <input
-                type="number"
-                min="1"
-                value={form.maxMarks}
-                onChange={(e) => setField('maxMarks', e.target.value)}
-                placeholder="e.g. 100"
-                className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
-            </label>
-
-            <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-              Type
-              <select
-                value={form.type}
-                onChange={(e) => setField('type', e.target.value)}
-                className="rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              >
-                {EXAM_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
 
           {error ? (

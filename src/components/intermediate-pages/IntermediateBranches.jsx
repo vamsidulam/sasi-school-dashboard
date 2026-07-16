@@ -68,8 +68,8 @@ export default function IntermediateBranches() {
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">Intermediate branches</h2>
-          <p className="text-sm text-gray-500">Manage branches in the intermediate dashboard.</p>
+          <h2 className="text-lg font-semibold text-gray-900">Objective branches</h2>
+          <p className="text-sm text-gray-500">Manage branches in the objective dashboard.</p>
         </div>
         <button
           type="button"

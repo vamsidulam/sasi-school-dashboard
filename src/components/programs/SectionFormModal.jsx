@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { X, Loader2 } from 'lucide-react'
 
 const emptyForm = () => ({
   programId: '',
-  programQuery: '',
+  classStandardId: '',
   sectionAbbreviation: '',
   sectionName: '',
 })
@@ -13,8 +13,10 @@ const inputCls =
 
 export default function SectionFormModal({
   open,
-  initialProgram = null,
+  mode = 'create',
+  initial = null,
   programs = [],
+  classStandards = [],
   programsLoading = false,
   onClose,
   onSubmit,
@@ -22,62 +24,54 @@ export default function SectionFormModal({
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState(null)
   const [submitting, setSubmitting] = useState(false)
-  const [programOpen, setProgramOpen] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    setForm(
-      initialProgram
-        ? {
-            programId: initialProgram.id,
-            programQuery: initialProgram.program || '',
-            sectionAbbreviation: '',
-            sectionName: '',
-          }
-        : emptyForm(),
-    )
+    if (mode === 'edit' && initial) {
+      setForm({
+        programId: initial.programId || '',
+        classStandardId: initial.classStandardId || '',
+        sectionAbbreviation: initial.sectionAbbreviation || '',
+        sectionName: initial.sectionName || '',
+      })
+    } else {
+      setForm(emptyForm())
+    }
     setError(null)
     setSubmitting(false)
-  }, [open, initialProgram])
-
-  const matches = useMemo(() => {
-    const q = form.programQuery.trim().toLowerCase()
-    if (!q) return programs.slice(0, 8)
-    return programs
-      .filter((p) => (p.program || '').toLowerCase().includes(q))
-      .slice(0, 8)
-  }, [form.programQuery, programs])
+  }, [open, initial, mode])
 
   if (!open) return null
 
   const setField = (key, value) => setForm((f) => ({ ...f, [key]: value }))
 
-  const handleProgramInput = (val) => {
-    const match = programs.find(
-      (p) => (p.program || '').toLowerCase() === val.trim().toLowerCase(),
-    )
+  // Filter class standards based on selected program
+  const availableClassStandards = form.programId
+    ? classStandards.filter((cs) => cs.programId === form.programId)
+    : []
+
+  // Auto-set programId when classStandardId changes
+  const handleClassStandardChange = (classStandardId) => {
+    const cs = classStandards.find((item) => item.id === classStandardId)
     setForm((f) => ({
       ...f,
-      programQuery: val,
-      programId: match?.id || '',
+      classStandardId,
+      programId: cs?.programId || f.programId,
     }))
-  }
-
-  const selectProgram = (p) => {
-    setForm((f) => ({ ...f, programQuery: p.program, programId: p.id }))
-    setProgramOpen(false)
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!form.programId) return setError('Pick a program from the list.')
-    if (!form.sectionAbbreviation.trim()) return setError('Abbreviation is required.')
+    if (!form.programId) return setError('Program is required.')
+    if (!form.classStandardId) return setError('Class standard is required.')
+    if (!form.sectionAbbreviation.trim()) return setError('Section abbreviation is required.')
     if (!form.sectionName.trim()) return setError('Section name is required.')
     setError(null)
     setSubmitting(true)
     try {
       await onSubmit?.({
         programId: form.programId,
+        classStandardId: form.classStandardId,
         sectionAbbreviation: form.sectionAbbreviation.trim(),
         sectionName: form.sectionName.trim(),
       })
@@ -87,6 +81,9 @@ export default function SectionFormModal({
       setSubmitting(false)
     }
   }
+
+  const selectedProgram = programs.find((p) => p.id === form.programId)
+  const selectedClassStandard = classStandards.find((cs) => cs.id === form.classStandardId)
 
   return (
     <div
@@ -103,7 +100,7 @@ export default function SectionFormModal({
       >
         <header className="flex items-center justify-between border-b border-gray-200 px-5 py-3">
           <h2 id="section-modal-title" className="text-base font-semibold text-gray-900">
-            New section
+            {mode === 'edit' ? 'Edit Section' : 'New Section'}
           </h2>
           <button
             type="button"
@@ -116,64 +113,86 @@ export default function SectionFormModal({
         </header>
 
         <div className="space-y-4 px-5 py-4">
-          <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Program
-            <div className="relative">
-              <input
-                type="text"
-                value={form.programQuery}
-                onChange={(e) => handleProgramInput(e.target.value)}
-                onFocus={() => setProgramOpen(true)}
-                onBlur={() => setTimeout(() => setProgramOpen(false), 100)}
-                placeholder="Type to search programs…"
-                className={`${inputCls} w-full`}
-                disabled={Boolean(initialProgram)}
-              />
-              {programOpen && matches.length > 0 && !initialProgram ? (
-                <ul className="absolute left-0 right-0 top-full z-10 mt-1 max-h-56 overflow-y-auto rounded-md border border-gray-200 bg-white py-1 shadow-lg">
-                  {programsLoading ? (
-                    <li className="px-2.5 py-1.5 text-xs text-gray-500">Loading…</li>
-                  ) : null}
-                  {matches.map((p) => (
-                    <li key={p.id}>
-                      <button
-                        type="button"
-                        onMouseDown={(e) => {
-                          e.preventDefault()
-                          selectProgram(p)
-                        }}
-                        className="flex w-full items-center justify-between gap-2 px-2.5 py-1.5 text-left text-sm hover:bg-brand-50"
-                      >
-                        <span className="text-gray-900">{p.program}</span>
-                        <span className="text-[11px] text-gray-500">{p.standard}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+          {programs.length === 0 ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              Please create a program first before adding sections.
             </div>
+          ) : classStandards.length === 0 ? (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+              Please create class standards first before adding sections.
+            </div>
+          ) : null}
+
+          <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
+            Program <span className="text-red-500">*</span>
+            <select
+              value={form.programId}
+              onChange={(e) => setField('programId', e.target.value)}
+              className={inputCls}
+              required
+            >
+              <option value="">Select program...</option>
+              {programs.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1 text-xs font-medium text-gray-700">
+            Class Standard <span className="text-red-500">*</span>
+            <select
+              value={form.classStandardId}
+              onChange={(e) => handleClassStandardChange(e.target.value)}
+              className={inputCls}
+              required
+              disabled={!form.programId}
+            >
+              <option value="">
+                {form.programId ? 'Select class standard...' : 'Select program first'}
+              </option>
+              {availableClassStandards.map((cs) => (
+                <option key={cs.id} value={cs.id}>
+                  {cs.standardName}
+                </option>
+              ))}
+            </select>
+            {form.programId && availableClassStandards.length === 0 ? (
+              <p className="text-[11px] text-amber-600">
+                No class standards found for this program. Create them first in the Class Standards tab.
+              </p>
+            ) : null}
           </div>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Section abbreviation
+            Section Abbreviation <span className="text-red-500">*</span>
             <input
               type="text"
               value={form.sectionAbbreviation}
               onChange={(e) => setField('sectionAbbreviation', e.target.value)}
-              placeholder="e.g. A, B, C-1"
+              placeholder="e.g., SLK, SUK, S1, A, B"
               className={inputCls}
+              required
             />
+            <span className="text-[11px] font-normal text-gray-500">
+              Short code for this section
+            </span>
           </label>
 
           <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
-            Section name
+            Section Name <span className="text-red-500">*</span>
             <input
               type="text"
               value={form.sectionName}
               onChange={(e) => setField('sectionName', e.target.value)}
-              placeholder="e.g. Section A - Morning batch"
+              placeholder="e.g., State Lower Kindergarden, Section A"
               className={inputCls}
+              required
             />
+            <span className="text-[11px] font-normal text-gray-500">
+              Full descriptive name for this section
+            </span>
           </label>
 
           {error ? (
@@ -194,11 +213,11 @@ export default function SectionFormModal({
           </button>
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || programs.length === 0 || classStandards.length === 0}
             className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Create section
+            {mode === 'edit' ? 'Save Changes' : 'Create Section'}
           </button>
         </footer>
       </form>

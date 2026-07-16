@@ -3,6 +3,7 @@ import { X, Loader2, UploadCloud } from 'lucide-react'
 import IntermediateFilePicker from './IntermediateFilePicker.jsx'
 import { extractStudentsFromFile } from './extractIntermediateFile.js'
 import { intUploadApi } from '../../lib/intermediateApi.js'
+import { useAuth } from '../../hooks/useAuth.js'
 
 const STUDENT_FIELDS = [
   { key: 'code', label: 'Student Code', required: true, placeholder: 'e.g. A or StudentCode' },
@@ -19,6 +20,7 @@ const emptyMappings = () =>
   STUDENT_FIELDS.reduce((acc, f) => ({ ...acc, [f.key]: '' }), {})
 
 export default function IntermediateStudentsUploadModal({ open, onClose, onUploaded }) {
+  const { user } = useAuth()
   const [file, setFile] = useState(null)
   const [tabName, setTabName] = useState('')
   const [startRow, setStartRow] = useState('')
@@ -102,6 +104,7 @@ export default function IntermediateStudentsUploadModal({ open, onClose, onUploa
       const response = await intUploadApi.students({
         students,
         fileName: file.name,
+        uploadedBy: user?.email || null,
       })
 
       setResult({ ...response, warnings })

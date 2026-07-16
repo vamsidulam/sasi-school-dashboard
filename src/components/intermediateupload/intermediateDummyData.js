@@ -28,7 +28,7 @@ export const DUMMY_EXAMS = [
   {
     id: 'exam-001',
     examname: 'Weekly Test 5',
-    branchid: 'branch-int',
+    branchid: ['branch-int'],
     streamid: 'stream-mpc',
     yearid: 'year-mpc-1',
     academicyearid: 'ay-2024-2026',
@@ -39,7 +39,7 @@ export const DUMMY_EXAMS = [
   {
     id: 'exam-002',
     examname: 'Grand Test 3',
-    branchid: 'branch-int',
+    branchid: ['branch-int'],
     streamid: 'stream-mpc',
     yearid: 'year-mpc-2',
     academicyearid: 'ay-2024-2026',
@@ -50,7 +50,7 @@ export const DUMMY_EXAMS = [
   {
     id: 'exam-003',
     examname: 'Botany Quiz 2',
-    branchid: 'branch-int',
+    branchid: ['branch-int'],
     streamid: 'stream-bipc',
     yearid: 'year-bipc-1',
     academicyearid: 'ay-2024-2026',

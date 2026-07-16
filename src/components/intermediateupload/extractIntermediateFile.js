@@ -247,6 +247,150 @@ export async function extractExamQuestionTopicsFromFile(
 }
 
 /**
+ * Parse a topics file with name + subject + weightage + tabname columns.
+ *
+ * @param {File} file
+ * @param {Object} opts
+ * @param {string} [opts.tabName]   sheet name or 0-based index (xlsx only)
+ * @param {number} [opts.startRow]  first Excel row to include (≥2; row 1 is header)
+ * @param {number} [opts.endRow]    last Excel row to include (inclusive)
+ * @param {Object} opts.columnMappings  { name: columnRef, subject: columnRef, weightage?: columnRef, tabname?: columnRef }
+ * @returns {Promise<{ rows: Array<{name, subject, weightage?, tabname?}>, warnings: string[] }>}
+ */
+export async function extractTopicsFromFile(file, { tabName, startRow, endRow, columnMappings }) {
+  const extracted = await extractFile(file)
+  const sheet = findSheet(extracted, tabName)
+  if (!sheet) {
+    throw new Error(
+      tabName
+        ? `Tab "${tabName}" not found. Available: ${extracted.sheetNames?.join(', ') || 'default'}`
+        : 'No sheet found in file'
+    )
+  }
+
+  const headers = sheet.headers || []
+  const warnings = []
+  const resolved = {}
+
+  // Resolve column mappings
+  for (const [key, ref] of Object.entries(columnMappings)) {
+    if (!ref || !String(ref).trim()) continue
+    const h = resolveHeader(ref, headers)
+    if (!h) {
+      warnings.push(`Column "${ref}" for ${key} not found`)
+    } else {
+      resolved[key] = h
+    }
+  }
+
+  if (!resolved.name) {
+    throw new Error('name column could not be resolved')
+  }
+
+  const { startIdx, endIdx } = rowRangeToSlice(
+    startRow,
+    endRow,
+    sheet.rows.length,
+  )
+  const slicedRows = sheet.rows.slice(startIdx, endIdx)
+
+  const rows = []
+  for (const rawRow of slicedRows) {
+    const name = String(rawRow[resolved.name] || '').trim()
+    if (!name) continue // Skip empty rows
+
+    const row = { name }
+    if (resolved.subject) {
+      const s = rawRow[resolved.subject]
+      if (s !== null && s !== undefined && s !== '') {
+        row.subject = String(s).trim()
+      }
+    }
+    if (resolved.weightage) {
+      const w = rawRow[resolved.weightage]
+      if (w !== null && w !== undefined && w !== '') {
+        row.weightage = Number(w)
+      }
+    }
+    if (resolved.tabname) {
+      const t = rawRow[resolved.tabname]
+      if (t !== null && t !== undefined && t !== '') {
+        row.tabname = String(t).trim()
+      }
+    }
+    rows.push(row)
+  }
+
+  return { rows, warnings }
+}
+
+/**
+ * Parse a subtopics file with name + topic columns.
+ *
+ * @param {File} file
+ * @param {Object} opts
+ * @param {string} [opts.tabName]   sheet name or 0-based index (xlsx only)
+ * @param {number} [opts.startRow]  first Excel row to include (≥2; row 1 is header)
+ * @param {number} [opts.endRow]    last Excel row to include (inclusive)
+ * @param {Object} opts.columnMappings  { name: columnRef, topic: columnRef }
+ * @returns {Promise<{ rows: Array<{name, topic}>, warnings: string[] }>}
+ */
+export async function extractSubtopicsFromFile(file, { tabName, startRow, endRow, columnMappings }) {
+  const extracted = await extractFile(file)
+  const sheet = findSheet(extracted, tabName)
+  if (!sheet) {
+    throw new Error(
+      tabName
+        ? `Tab "${tabName}" not found. Available: ${extracted.sheetNames?.join(', ') || 'default'}`
+        : 'No sheet found in file'
+    )
+  }
+
+  const headers = sheet.headers || []
+  const warnings = []
+  const resolved = {}
+
+  // Resolve column mappings
+  for (const [key, ref] of Object.entries(columnMappings)) {
+    if (!ref || !String(ref).trim()) continue
+    const h = resolveHeader(ref, headers)
+    if (!h) {
+      warnings.push(`Column "${ref}" for ${key} not found`)
+    } else {
+      resolved[key] = h
+    }
+  }
+
+  if (!resolved.name) {
+    throw new Error('name column could not be resolved')
+  }
+
+  const { startIdx, endIdx } = rowRangeToSlice(
+    startRow,
+    endRow,
+    sheet.rows.length,
+  )
+  const slicedRows = sheet.rows.slice(startIdx, endIdx)
+
+  const rows = []
+  for (const rawRow of slicedRows) {
+    const name = String(rawRow[resolved.name] || '').trim()
+    if (!name) continue // Skip empty rows
+
+    const row = { name }
+    if (resolved.topic) {
+      const t = rawRow[resolved.topic]
+      if (t !== null && t !== undefined && t !== '') {
+        row.topic = String(t).trim()
+      }
+    }
+    rows.push(row)
+  }
+
+  return { rows, warnings }
+}
+
+/**
  * Parse an exam-results workbook using per-subject mappings.
  *
  * Each subject mapping can specify its own tab, lookup column, row limit,

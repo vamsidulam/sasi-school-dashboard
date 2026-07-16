@@ -64,15 +64,30 @@ export const intYearsApi = entityClient('/years')
 export const intAcademicYearsApi = entityClient('/academicyears')
 export const intSubjectsApi = entityClient('/subjects')
 intSubjectsApi.byStreamYear = ({ streamid, yearid }) => {
-  const qs = new URLSearchParams({ streamid, yearid }).toString()
-  return request(`/subjects/by/stream-year?${qs}`)
+  const params = new URLSearchParams()
+  if (streamid) params.set('streamid', streamid)
+  if (yearid) params.set('yearid', yearid)
+  return request(`/subjects/by/stream-year?${params.toString()}`)
+}
+intSubjectsApi.byIds = (ids) => {
+  return request('/subjects/by/ids', { method: 'POST', body: JSON.stringify({ ids }) })
 }
 export const intExamsApi = entityClient('/exams')
 export const intExamResultsApi = entityClient('/examresults')
 export const intExamTypesApi = entityClient('/examtypes')
 export const intExamQuestionTopicsApi = entityClient('/examquestiontopics')
 export const intTopicsApi = entityClient('/topics')
+intTopicsApi.topicsBySubject = (subjectid) => {
+  const params = new URLSearchParams()
+  if (subjectid) params.set('subjectid', subjectid)
+  return request(`/topics/by-subject?${params.toString()}`)
+}
 export const intSubtopicsApi = entityClient('/subtopics')
+intSubtopicsApi.subtopicsByTopic = (topicid) => {
+  const params = new URLSearchParams()
+  if (topicid) params.set('topicid', topicid)
+  return request(`/subtopics/by-topic?${params.toString()}`)
+}
 export const intLevelsApi = entityClient('/levels')
 export const intQuestionTypesApi = entityClient('/questiontypes')
 intExamQuestionTopicsApi.byExam = (examid) =>
@@ -88,6 +103,16 @@ export const intUploadApi = {
     }),
   examQuestionTopics: (body) =>
     request('/upload/examquestiontopics', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  topics: (body) =>
+    request('/upload/topics', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  subtopics: (body) =>
+    request('/upload/subtopics', {
       method: 'POST',
       body: JSON.stringify(body),
     }),

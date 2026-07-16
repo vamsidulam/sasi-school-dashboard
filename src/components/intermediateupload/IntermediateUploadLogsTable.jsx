@@ -1,21 +1,23 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, AlertTriangle, XCircle, CheckCircle2, Info } from 'lucide-react'
 import IntermediateStatusBadge from './IntermediateStatusBadge.jsx'
 
 function LogRow({ log }) {
   const [expanded, setExpanded] = useState(false)
-  const hasError = Boolean(log.errorLog)
+  const hasDetails = Boolean(log.errorLog) || (log.warnings?.length > 0) || log.skipped
 
   return (
     <>
-      <tr className="odd:bg-white even:bg-gray-50/40 hover:bg-gray-50">
+      <tr
+        className={`odd:bg-white even:bg-gray-50/40 hover:bg-gray-50 cursor-pointer ${expanded ? 'bg-gray-50' : ''}`}
+        onClick={() => hasDetails && setExpanded((v) => !v)}
+      >
         <td className="px-3 py-2">
-          {hasError ? (
+          {hasDetails ? (
             <button
               type="button"
-              onClick={() => setExpanded((v) => !v)}
               className="rounded p-0.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-              aria-label={expanded ? 'Collapse error log' : 'Expand error log'}
+              aria-label={expanded ? 'Collapse details' : 'Expand details'}
             >
               {expanded ? (
                 <ChevronDown className="h-4 w-4" />
@@ -42,13 +44,85 @@ function LogRow({ log }) {
           <IntermediateStatusBadge status={log.status} />
         </td>
       </tr>
-      {expanded && hasError ? (
-        <tr className="bg-red-50/40">
+      {expanded && hasDetails ? (
+        <tr className="bg-gray-50/60">
           <td />
-          <td colSpan={6} className="px-3 py-2">
-            <pre className="whitespace-pre-wrap rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {log.errorLog}
-            </pre>
+          <td colSpan={6} className="px-3 py-3">
+            <div className="space-y-3">
+              {/* Summary */}
+              <div className="flex flex-wrap gap-3 text-xs">
+                <span className="inline-flex items-center gap-1 rounded-md bg-green-50 px-2 py-1 text-green-700 border border-green-200">
+                  <CheckCircle2 className="h-3 w-3" /> Inserted: {log.rowsProcessed}
+                </span>
+                {log.skipped && (
+                  <>
+                    {log.skipped.inFile > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-gray-600 border border-gray-200">
+                        <Info className="h-3 w-3" /> Skipped (in file): {log.skipped.inFile}
+                      </span>
+                    )}
+                    {log.skipped.inDb > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-2 py-1 text-gray-600 border border-gray-200">
+                        <Info className="h-3 w-3" /> Skipped (in DB): {log.skipped.inDb}
+                      </span>
+                    )}
+                    {log.skipped.invalid > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-red-50 px-2 py-1 text-red-600 border border-red-200">
+                        <XCircle className="h-3 w-3" /> Invalid: {log.skipped.invalid}
+                      </span>
+                    )}
+                    {log.skipped.studentNotFound > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-amber-700 border border-amber-200">
+                        <AlertTriangle className="h-3 w-3" /> Student not found: {log.skipped.studentNotFound}
+                      </span>
+                    )}
+                    {log.skipped.subjectNotFound > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-amber-700 border border-amber-200">
+                        <AlertTriangle className="h-3 w-3" /> Subject not found: {log.skipped.subjectNotFound}
+                      </span>
+                    )}
+                    {log.skipped.topicNotFound > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-amber-700 border border-amber-200">
+                        <AlertTriangle className="h-3 w-3" /> Topic not found: {log.skipped.topicNotFound}
+                      </span>
+                    )}
+                    {log.skipped.subtopicNotFound > 0 && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-1 text-amber-700 border border-amber-200">
+                        <AlertTriangle className="h-3 w-3" /> Subtopic not found: {log.skipped.subtopicNotFound}
+                      </span>
+                    )}
+                  </>
+                )}
+              </div>
+
+              {/* Warnings */}
+              {log.warnings?.length > 0 && (
+                <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+                  <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-amber-800">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Warnings ({log.warnings.length})
+                  </div>
+                  <ul className="list-disc pl-4 space-y-0.5">
+                    {log.warnings.map((w, i) => (
+                      <li key={i} className="text-xs text-amber-700">{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Errors */}
+              {log.errorLog && (
+                <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2">
+                  <div className="mb-1 flex items-center gap-1.5 text-xs font-semibold text-red-800">
+                    <XCircle className="h-3.5 w-3.5" />
+                    Errors
+                  </div>
+                  <pre className="whitespace-pre-wrap text-xs text-red-700">
+                    {log.errorLog}
+                  </pre>
+                </div>
+              )}
+            </div>
           </td>
         </tr>
       ) : null}

@@ -32,7 +32,7 @@ export default function StudentsTable({ students, onEdit, onDelete }) {
             <th className="px-3 py-2">Branch</th>
             <th className="px-3 py-2">Stream</th>
             <th className="px-3 py-2">Program</th>
-            <th className="px-3 py-2 text-right">Joining year</th>
+            <th className="px-3 py-2 text-right">Academic Year</th>
             <th className="px-3 py-2 text-right">Actions</th>
           </tr>
         </thead>
@@ -46,7 +46,7 @@ export default function StudentsTable({ students, onEdit, onDelete }) {
                 <StreamBadge isCollege={s.isCollege} />
               </td>
               <td className="px-3 py-2 text-gray-700">{s.program}</td>
-              <td className="px-3 py-2 text-right tabular-nums text-gray-700">{s.joiningYear}</td>
+              <td className="px-3 py-2 text-right text-gray-700">{s.academicYear || '—'}</td>
               <td className="px-3 py-2">
                 <div className="flex items-center justify-end gap-1">
                   <button
