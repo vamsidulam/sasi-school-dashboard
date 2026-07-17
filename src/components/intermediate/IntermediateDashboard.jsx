@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import IntermediateHeader from './IntermediateHeader.jsx'
-import FilterBar from './FilterBar.jsx'
 import Overview from './Overview.jsx'
 import BranchAnalysis from './BranchAnalysis.jsx'
 import Diagnostics from './Diagnostics.jsx'
@@ -390,13 +389,24 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
 
       {/* Title */}
       {onBack && (
-        <div className="mb-6">
-          <h1 className="mb-2 font-serif text-3xl font-semibold text-gray-900">
-            Objective Dashboard
-          </h1>
-          <p className="text-sm text-gray-600">
-            Advanced analytics for competitive exam preparation
-          </p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="mb-2 font-serif text-3xl font-semibold text-gray-900">
+              Objective Dashboard
+            </h1>
+            <p className="text-sm text-gray-600">
+              Advanced analytics for competitive exam preparation
+            </p>
+          </div>
+          <div className="flex items-end gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500 self-center mr-2">Marking Scheme</span>
+            {[['R', 'Right'], ['W', 'Wrong'], ['L', 'Left'], ['C', 'Bonus']].map(([c, n]) => (
+              <div key={c} className="flex flex-col items-center gap-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">{n}</span>
+                <span className="rounded-md border border-gray-200 bg-gray-100 px-3 py-1.5 font-mono text-sm text-gray-800">{scheme[c]}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -425,18 +435,6 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
       />
 
       <div className="mx-auto max-w-[1480px] px-4 sm:px-6 lg:px-7">
-        {/* Hide FilterBar on diagnostics tab - diagnostics has no filters */}
-        {tab !== 'diagnostics' && (
-          <FilterBar
-            subject={subject}
-            onSubjectChange={setSubject}
-            subjects={subjects}
-            kind={kind}
-            scheme={scheme}
-            onSchemeChange={setScheme}
-          />
-        )}
-
         <main className="pb-12 pt-4">
           {tab === 'overview' && (
             <Overview
@@ -514,48 +512,11 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
 
       {modal && (tab === 'overview' || tab === 'leaderboard') && filtersReady && (
         typeof modal === 'string' ? (
-          <div
-            className="fixed inset-0 z-[200] flex items-center justify-center bg-gray-900/60 px-4 backdrop-blur-sm"
-            onClick={() => setModal(null)}
-          >
-            <div
-              className="w-full max-w-md rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-4 text-center">
-                <div className="font-serif text-xl font-semibold text-gray-900">View Student Report</div>
-                <div className="mt-1 font-mono text-sm text-gray-500">{modal}</div>
-              </div>
-              <p className="mb-5 text-center text-sm text-gray-600">
-                How would you like to view this student's analysis?
-              </p>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModal({ code: modal, scope: 'filtered' })}
-                  className="flex-1 rounded-lg border-2 border-brand-500 bg-brand-50 px-4 py-3 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
-                >
-                  Filtered Exams Only
-                  <div className="mt-1 text-[11px] font-normal text-gray-500">Based on current header selection</div>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModal({ code: modal, scope: 'all' })}
-                  className="flex-1 rounded-lg border-2 border-gray-300 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100"
-                >
-                  All Exams
-                  <div className="mt-1 text-[11px] font-normal text-gray-500">Show all test data</div>
-                </button>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModal(null)}
-                className="mt-4 w-full rounded-md border border-gray-200 py-2 text-sm text-gray-500 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+          <StudentModalApi
+            studentCode={modal}
+            filters={analyticsFilters}
+            onClose={() => setModal(null)}
+          />
         ) : (
           <StudentModalApi
             studentCode={modal.code}

@@ -85,6 +85,8 @@ export const intAnalyticsApi = {
     request(`/overview/accuracy?${buildFilterQuery(filters)}`),
   overviewAttemptRate: (filters) =>
     request(`/overview/attempt-rate?${buildFilterQuery(filters)}`),
+  overviewSubjectWise: (filters) =>
+    request(`/overview/subject-wise?${buildFilterQuery(filters)}`),
   overviewScoreTrend: (filters) =>
     request(`/overview/score-trend?${buildFilterQuery(filters)}`),
   overviewTopPerformers: (filters) =>

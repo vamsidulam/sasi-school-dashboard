@@ -13,7 +13,6 @@ const COLS = [
   ['wrong', 'Wrong'],
   ['left', 'Left'],
   ['accuracy', 'Accuracy %'],
-  ['pctMark', 'Score %'],
   ['tests', 'Exams'],
 ]
 
@@ -217,9 +216,6 @@ export default function Leaderboard({ filters, ready, setModal }) {
                 </td>
                 <td className="border-b border-gray-100 px-3 py-2.5 font-mono text-gray-700">
                   {s.accuracy.toFixed(1)}%
-                </td>
-                <td className="border-b border-gray-100 px-3 py-2.5 font-mono text-gray-700">
-                  {s.pctMark.toFixed(1)}%
                 </td>
                 <td className="border-b border-gray-100 px-3 py-2.5 font-mono text-gray-700">
                   {s.tests}

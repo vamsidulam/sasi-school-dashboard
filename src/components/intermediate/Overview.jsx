@@ -79,6 +79,7 @@ export default function Overview({ filters, setModal, ready }) {
   const [scoreRange, setScoreRange] = useState(null)
   const [accuracyData, setAccuracyData] = useState(null)
   const [attemptData, setAttemptData] = useState(null)
+  const [subjectWise, setSubjectWise] = useState([])
   const [trend, setTrend] = useState([])
   const [performers, setPerformers] = useState([])
   const [weakTopics, setWeakTopics] = useState([])
@@ -98,16 +99,18 @@ export default function Overview({ filters, setModal, ready }) {
       intAnalyticsApi.overviewHighestScore(filters),
       intAnalyticsApi.overviewAccuracy(filters),
       intAnalyticsApi.overviewAttemptRate(filters),
+      intAnalyticsApi.overviewSubjectWise(filters),
       intAnalyticsApi.overviewScoreTrend(filters),
       intAnalyticsApi.overviewTopPerformers(filters),
       intAnalyticsApi.overviewWeakestTopics(filters),
     ])
-      .then(([avg, range, acc, att, tr, top, weak]) => {
+      .then(([avg, range, acc, att, sw, tr, top, weak]) => {
         if (cancelled) return
         setTestAvg(avg)
         setScoreRange(range)
         setAccuracyData(acc)
         setAttemptData(att)
+        setSubjectWise(sw.subjects || [])
         setTrend(tr.trend || [])
         setPerformers(top.performers || [])
         setWeakTopics(weak.topics || [])
@@ -149,39 +152,23 @@ export default function Overview({ filters, setModal, ready }) {
       label: 'Test Average',
       value: testAvg?.avg != null ? fmt(testAvg.avg) : '—',
       sub:
-        testAvg?.med != null
-          ? `Median ${fmt(testAvg.med)} · ${testAvg?.testRecords ?? 0} attempts`
+        testAvg?.students != null
+          ? `${testAvg.students} students · ${testAvg.exams || 0} exams`
           : '—',
       tone: 'red600',
       p: testAvg?.avg != null && topScore ? pct(testAvg.avg, topScore) : 0,
     },
     {
-      label: 'Highest Score',
+      label: 'Score',
       value: scoreRange?.top != null ? fmt(scoreRange.top) : '—',
       sub:
         scoreRange?.low != null ? `Lowest ${fmt(scoreRange.low)}` : '—',
       tone: 'red700',
       p: 100,
     },
-    {
-      label: 'Accuracy',
-      value:
-        accuracyData?.accuracy != null
-          ? accuracyData.accuracy.toFixed(1) + '%'
-          : '—',
-      sub: 'of attempted questions',
-      tone: 'red500',
-      p: accuracyData?.accuracy ?? 0,
-    },
-    {
-      label: 'Attempt Rate',
-      value:
-        attemptData?.attempt != null ? attemptData.attempt.toFixed(1) + '%' : '—',
-      sub: 'of all questions',
-      tone: 'red400',
-      p: attemptData?.attempt ?? 0,
-    },
   ]
+
+  const SUBJECT_TONES = ['red500', 'red400', 'red600', 'red700', 'red500', 'red400']
 
   if (!loading && !hasStudents) {
     return (
@@ -194,9 +181,23 @@ export default function Overview({ filters, setModal, ready }) {
 
   return (
     <div className="grid gap-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="flex gap-4 overflow-x-auto">
         {kcards.map((k) => (
-          <KpiCard key={k.label} {...k} loading={loading} />
+          <div key={k.label} className="min-w-[160px] flex-1">
+            <KpiCard {...k} loading={loading} />
+          </div>
+        ))}
+        {subjectWise.map((s, i) => (
+          <div key={s.subject} className="min-w-[160px] flex-1">
+            <KpiCard
+              label={`${s.subject} Avg`}
+              value={loading ? '—' : fmt(s.avgScore)}
+              sub={loading ? '—' : `Accuracy ${s.accuracy.toFixed(1)}%`}
+              tone={SUBJECT_TONES[i % SUBJECT_TONES.length]}
+              p={s.accuracy ?? 0}
+              loading={loading}
+            />
+          </div>
         ))}
       </div>
 
@@ -217,7 +218,34 @@ export default function Overview({ filters, setModal, ready }) {
                   height={70}
                 />
                 <YAxis tick={AXIS_TICK} />
-                <Tooltip contentStyle={TOOLTIP_STYLE} labelStyle={TOOLTIP_LABEL_STYLE} />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0]?.payload
+                    if (!d) return null
+                    return (
+                      <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-lg min-w-[200px]">
+                        <div className="mb-2 text-xs font-bold text-gray-800">{d.full}</div>
+                        {d.topperName && (
+                          <div className="rounded-md border border-gray-100 bg-gray-50 px-3 py-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-gray-900 text-xs">{d.topperName}</span>
+                              <span className="font-bold text-[#7F1A1C] text-sm">{d.top}</span>
+                            </div>
+                            <div className="mt-0.5 flex items-center justify-between">
+                              <span className="text-[11px] text-gray-500">{d.topperCode}</span>
+                              <span className="text-[11px] font-semibold text-brand-600">{d.topperAccuracy}% acc</span>
+                            </div>
+                            {d.topperBranch && (
+                              <div className="mt-0.5 text-[10px] text-gray-400">{d.topperBranch}</div>
+                            )}
+                          </div>
+                        )}
+                        <div className="mt-2 text-[10px] text-gray-400">{d.students} students</div>
+                      </div>
+                    )
+                  }}
+                />
                 <Line
                   type="monotone"
                   dataKey="avg"

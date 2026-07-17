@@ -535,130 +535,80 @@ export default function StudentModalApi({ studentCode, filters, onClose }) {
             })()}
 
             <SectionTitle>Test-wise Breakdown</SectionTitle>
-            <div className="overflow-auto rounded-md border border-gray-100">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr>
-                    {['Test', 'Subject', 'Score', 'R', 'W', 'L', 'Accuracy'].map((h) => (
-                      <th
-                        key={h}
-                        className="border-b-2 border-gray-200 bg-gray-50 px-3 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-500"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const sorted = [...(data.records || [])].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.exam.localeCompare(b.exam))
-                    const deduped = []
-                    const seen = new Set()
-                    sorted.forEach((r) => {
-                      const key = `${r.exam}::${r.subject}`
-                      if (!seen.has(key)) {
-                        seen.add(key)
-                        deduped.push(r)
-                      }
-                    })
+            {(() => {
+              const sorted = [...(data.records || [])].sort((a, b) => (a.date || '').localeCompare(b.date || '') || a.exam.localeCompare(b.exam))
+              const deduped = []
+              const seen = new Set()
+              sorted.forEach((r) => {
+                const key = `${r.exam}::${r.subject}`
+                if (!seen.has(key)) {
+                  seen.add(key)
+                  deduped.push(r)
+                }
+              })
 
-                    const byExam = {}
-                    deduped.forEach((r) => {
-                      if (!byExam[r.exam]) byExam[r.exam] = []
-                      byExam[r.exam].push(r)
-                    })
+              const allSubjects = [...new Set(deduped.map((r) => r.subject))]
+              const byExam = {}
+              deduped.forEach((r) => {
+                if (!byExam[r.exam]) byExam[r.exam] = {}
+                byExam[r.exam][r.subject] = r
+              })
+              const examNames = Object.keys(byExam)
 
-                    const examNames = Object.keys(byExam)
-                    const rows = []
-                    let grandScore = 0, grandR = 0, grandW = 0, grandL = 0, grandAtt = 0
+              return (
+                <div className="space-y-3">
+                  {examNames.map((examName) => {
+                    const examRecs = byExam[examName]
+                    const allRecs = Object.values(examRecs)
+                    const totalScore = allRecs.reduce((s, r) => s + r.score, 0)
+                    const totalR = allRecs.reduce((s, r) => s + r.right, 0)
+                    const totalAtt = allRecs.reduce((s, r) => s + r.att, 0)
+                    const avgScore = allRecs.length ? totalScore / allRecs.length : 0
+                    const totalAcc = totalAtt > 0 ? pct(totalR, totalAtt) : 0
 
-                    examNames.forEach((examName) => {
-                      const recs = byExam[examName]
-                      recs.forEach((r, i) => {
-                        rows.push(
-                          <tr key={`${examName}-${i}`} className={i === 0 && rows.length > 0 ? 'border-t-2 border-gray-200' : ''}>
-                            <td className="border-b border-gray-100 px-3 py-2.5 font-mono text-[11px] text-gray-900">
-                              {r.exam}
-                            </td>
-                            <td className="border-b border-gray-100 px-3 py-2.5 text-gray-700">
-                              {r.subject}
-                            </td>
-                            <td className="border-b border-gray-100 px-3 py-2.5 font-mono font-semibold text-brand-600">
-                              {fmt(r.score)}
-                            </td>
-                            <td className="border-b border-gray-100 px-3 py-2.5">
-                              <span className="rounded bg-brand-600 px-2 py-0.5 text-[11px] font-mono font-semibold text-white">{r.right}</span>
-                            </td>
-                            <td className="border-b border-gray-100 px-3 py-2.5">
-                              <span className="rounded border border-brand-500 bg-white px-2 py-0.5 text-[11px] font-mono font-semibold text-brand-700">{r.wrong}</span>
-                            </td>
-                            <td className="border-b border-gray-100 px-3 py-2.5">
-                              <span className="rounded border border-gray-200 bg-gray-100 px-2 py-0.5 text-[11px] font-mono font-semibold text-gray-600">{r.left}</span>
-                            </td>
-                            <td className="border-b border-gray-100 px-3 py-2.5 font-mono text-gray-700">
-                              {pct(r.right, r.att).toFixed(0)}%
-                            </td>
-                          </tr>
-                        )
-                      })
-                      const examTot = recs.reduce((s, r) => s + r.score, 0)
-                      const examAvg = recs.length ? examTot / recs.length : 0
-                      const examR = recs.reduce((s, r) => s + r.right, 0)
-                      const examW = recs.reduce((s, r) => s + r.wrong, 0)
-                      const examL = recs.reduce((s, r) => s + r.left, 0)
-                      const examAtt = recs.reduce((s, r) => s + r.att, 0)
-                      grandScore += examTot; grandR += examR; grandW += examW; grandL += examL; grandAtt += examAtt
-                      rows.push(
-                        <tr key={`${examName}-total`} className="bg-gray-50">
-                          <td className="border-b-2 border-gray-300 px-3 py-2 text-[11px] font-bold text-gray-500" />
-                          <td className="border-b-2 border-gray-300 px-3 py-2 text-[11px] font-bold text-gray-700">TOTAL</td>
-                          <td className="border-b-2 border-gray-300 px-3 py-2 font-mono font-bold text-brand-700">
-                            <span className="text-gray-500">Avg:</span> {fmt(examAvg)} <span className="mx-1 text-gray-300">|</span> <span className="text-gray-500">Tot:</span> {fmt(examTot)}
-                          </td>
-                          <td className="border-b-2 border-gray-300 px-3 py-2 font-mono font-bold text-gray-800">{examR}</td>
-                          <td className="border-b-2 border-gray-300 px-3 py-2 font-mono font-bold text-gray-800">{examW}</td>
-                          <td className="border-b-2 border-gray-300 px-3 py-2 font-mono font-bold text-gray-800">{examL}</td>
-                          <td className="border-b-2 border-gray-300 px-3 py-2 font-mono font-bold text-gray-800">{pct(examR, examAtt).toFixed(0)}%</td>
-                        </tr>
-                      )
-                    })
-
-                    if (examNames.length > 1) {
-                      // Subject-wise summary
-                      const subjectMap = {}
-                      deduped.forEach((r) => {
-                        if (!subjectMap[r.subject]) subjectMap[r.subject] = { score: 0, right: 0, wrong: 0, left: 0, att: 0, count: 0 }
-                        const s = subjectMap[r.subject]
-                        s.score += r.score; s.right += r.right; s.wrong += r.wrong; s.left += r.left; s.att += r.att; s.count++
-                      })
-                      const subjects = Object.keys(subjectMap)
-                      subjects.forEach((subj, i) => {
-                        const s = subjectMap[subj]
-                        const subjAvg = s.count ? s.score / s.count : 0
-                        rows.push(
-                          <tr key={`subj-summary-${subj}`} className="bg-brand-50">
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 text-[11px] font-bold text-brand-700`}>
-                              {i === 0 ? 'SUMMARY' : ''}
-                            </td>
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 text-xs font-bold text-brand-700`}>
-                              {subj}
-                            </td>
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 font-mono font-bold text-brand-700`}>
-                              <span className="text-gray-500">Avg:</span> {fmt(subjAvg)} <span className="mx-1 text-gray-300">|</span> <span className="text-gray-500">Tot:</span> {fmt(s.score)}
-                            </td>
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 font-mono font-bold text-brand-700`}>{s.right}</td>
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 font-mono font-bold text-brand-700`}>{s.wrong}</td>
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 font-mono font-bold text-brand-700`}>{s.left}</td>
-                            <td className={`${i === 0 ? 'border-t-2 border-brand-300' : ''} border-b border-brand-200 px-3 py-2 font-mono font-bold text-brand-700`}>{pct(s.right, s.att).toFixed(0)}%</td>
-                          </tr>
-                        )
-                      })
-                    }
-                    return rows
-                  })()}
-                </tbody>
-              </table>
-            </div>
+                    return (
+                      <div key={examName} className="rounded-lg border border-gray-200 overflow-hidden">
+                        {/* Exam header */}
+                        <div className="flex items-center justify-between bg-gray-50 px-4 py-2 border-b border-gray-200">
+                          <span className="text-xs font-bold text-gray-800">{examName}</span>
+                          <div className="flex items-center gap-4 text-[11px]">
+                            <span className="text-gray-500">Total: <span className="font-bold text-gray-900">{fmt(totalScore)}</span></span>
+                            <span className="text-gray-500">Avg: <span className="font-bold text-brand-600">{fmt(avgScore)}</span></span>
+                            <span className="text-gray-500">Acc: <span className="font-bold text-gray-900">{totalAcc.toFixed(0)}%</span></span>
+                          </div>
+                        </div>
+                        {/* Subject cards in a row */}
+                        <div className="flex divide-x divide-gray-100">
+                          {allSubjects.map((subj) => {
+                            const r = examRecs[subj]
+                            if (!r) return (
+                              <div key={subj} className="flex-1 px-3 py-3 text-center text-xs text-gray-300">—</div>
+                            )
+                            const acc = pct(r.right, r.att)
+                            return (
+                              <div key={subj} className="flex-1 px-3 py-2.5">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs font-semibold uppercase text-gray-600">{subj}</span>
+                                  <span className="inline-flex items-center gap-1.5 text-xs font-mono">
+                                    <span className="font-semibold text-green-600">{r.right}R</span>
+                                    <span className="font-semibold text-red-500">{r.wrong}W</span>
+                                    <span className="font-semibold text-gray-400">{r.left}L</span>
+                                  </span>
+                                </div>
+                                <div className="mt-1.5 flex items-center gap-4 text-xs">
+                                  <span className="text-gray-500">Score: <span className="font-mono font-bold text-brand-600">{fmt(r.score)}</span></span>
+                                  <span className="text-gray-500">Accuracy: <span className="font-mono font-bold text-gray-800">{acc.toFixed(0)}%</span></span>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )
+            })()}
               </>
             )}
 

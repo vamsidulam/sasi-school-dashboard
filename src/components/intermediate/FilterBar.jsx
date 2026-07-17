@@ -28,7 +28,7 @@ export default function FilterBar({
 }) {
   return (
     <div className="flex flex-wrap items-end gap-4 pt-5 pb-2">
-      <div className="flex flex-col gap-1.5">
+      {/* <div className="flex flex-col gap-1.5">
         <Label>Subject</Label>
         <select
           value={subject}
@@ -40,7 +40,7 @@ export default function FilterBar({
             <option key={s} value={s}>{s}</option>
           ))}
         </select>
-      </div>
+      </div> */}
 
       <div className="flex flex-col gap-1.5">
         <Label>Marking Scheme</Label>

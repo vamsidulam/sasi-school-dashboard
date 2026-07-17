@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import { GraduationCap, Users, TrendingUp, Award, BookOpen } from 'lucide-react'
 import SchoolDashboard from '../components/dashboard/SchoolDashboard.jsx'
+import { SchoolDashboardAnalytics } from '../components/school-dashboard/index.js'
 import IntermediateDashboard from '../components/intermediate/IntermediateDashboard.jsx'
 import { useAcademicYear } from '../contexts/AcademicYearContext.jsx'
 import * as intApi from '../lib/intermediateboardApi.js'
@@ -24,22 +25,11 @@ export default function DashboardHome() {
   }
 
   if (selectedDashboard === 'school') {
-    return <SchoolDashboard onBack={handleBack} academicYearId={selectedYear} />
+    return <SchoolDashboardAnalytics onBack={handleBack} label="School" />
   }
 
   if (selectedDashboard === 'intermediate') {
-    return (
-      <SchoolDashboard
-        onBack={handleBack}
-        label="Intermediate"
-        programsApi={intApi.programsApi}
-        examsApi={intApi.examsApi}
-        classStandardsApi={intApi.classStandardsApi}
-        analysisApi={intApi.analysisApi}
-        fetchAll={intApi.fetchAll}
-        academicYearId={selectedYear}
-      />
-    )
+    return <SchoolDashboardAnalytics onBack={handleBack} label="Intermediate" />
   }
 
   if (selectedDashboard === 'objective') {
