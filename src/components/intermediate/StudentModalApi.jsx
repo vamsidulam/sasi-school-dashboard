@@ -563,7 +563,6 @@ export default function StudentModalApi({ studentCode, filters, onClose }) {
                     const totalScore = allRecs.reduce((s, r) => s + r.score, 0)
                     const totalR = allRecs.reduce((s, r) => s + r.right, 0)
                     const totalAtt = allRecs.reduce((s, r) => s + r.att, 0)
-                    const avgScore = allRecs.length ? totalScore / allRecs.length : 0
                     const totalAcc = totalAtt > 0 ? pct(totalR, totalAtt) : 0
 
                     return (
@@ -572,32 +571,31 @@ export default function StudentModalApi({ studentCode, filters, onClose }) {
                         <div className="flex items-center justify-between bg-gray-50 px-4 py-2 border-b border-gray-200">
                           <span className="text-xs font-bold text-gray-800">{examName}</span>
                           <div className="flex items-center gap-4 text-[11px]">
-                            <span className="text-gray-500">Total: <span className="font-bold text-gray-900">{fmt(totalScore)}</span></span>
-                            <span className="text-gray-500">Avg: <span className="font-bold text-brand-600">{fmt(avgScore)}</span></span>
-                            <span className="text-gray-500">Acc: <span className="font-bold text-gray-900">{totalAcc.toFixed(0)}%</span></span>
+                            <span className="text-gray-500">Score: <span className="font-bold text-gray-900">{fmt(totalScore)}</span></span>
+                            <span className="text-gray-500">Accuracy: <span className="font-bold text-gray-900">{totalAcc.toFixed(0)}%</span></span>
                           </div>
                         </div>
                         {/* Subject cards in a row */}
-                        <div className="flex divide-x divide-gray-100">
+                        <div className="flex divide-x-2 divide-gray-300">
                           {allSubjects.map((subj) => {
                             const r = examRecs[subj]
                             if (!r) return (
-                              <div key={subj} className="flex-1 px-3 py-3 text-center text-xs text-gray-300">—</div>
+                              <div key={subj} className="flex-1 px-3 py-2.5 text-center text-xs text-gray-300">—</div>
                             )
                             const acc = pct(r.right, r.att)
                             return (
                               <div key={subj} className="flex-1 px-3 py-2.5">
                                 <div className="flex items-center justify-between">
                                   <span className="text-xs font-semibold uppercase text-gray-600">{subj}</span>
-                                  <span className="inline-flex items-center gap-1.5 text-xs font-mono">
-                                    <span className="font-semibold text-green-600">{r.right}R</span>
-                                    <span className="font-semibold text-red-500">{r.wrong}W</span>
-                                    <span className="font-semibold text-gray-400">{r.left}L</span>
+                                  <span className="inline-flex items-center gap-3 text-xs">
+                                    <span className="text-gray-500">Score: <span className="font-mono font-bold text-brand-600">{fmt(r.score)}</span></span>
+                                    <span className="text-gray-500">Acc: <span className="font-mono font-bold text-gray-800">{acc.toFixed(0)}%</span></span>
                                   </span>
                                 </div>
-                                <div className="mt-1.5 flex items-center gap-4 text-xs">
-                                  <span className="text-gray-500">Score: <span className="font-mono font-bold text-brand-600">{fmt(r.score)}</span></span>
-                                  <span className="text-gray-500">Accuracy: <span className="font-mono font-bold text-gray-800">{acc.toFixed(0)}%</span></span>
+                                <div className="mt-1.5 inline-flex items-center gap-1.5 text-xs font-mono">
+                                  <span className="font-semibold text-green-600">{r.right}R</span>
+                                  <span className="font-semibold text-red-500">{r.wrong}W</span>
+                                  <span className="font-semibold text-gray-400">{r.left}L</span>
                                 </div>
                               </div>
                             )

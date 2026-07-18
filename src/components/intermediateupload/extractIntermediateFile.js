@@ -231,6 +231,7 @@ export async function extractExamQuestionTopicsFromFile(
     )
     const sliced = sheet.rows.slice(startIdx, endIdx)
 
+    let questionCounter = 0
     for (const row of sliced) {
       const out = { subjectId }
       for (const [field, header] of Object.entries(resolved)) {
@@ -239,6 +240,9 @@ export async function extractExamQuestionTopicsFromFile(
       }
       // Skip wholly-blank rows
       if (!out.questionId?.trim() && !out.topic?.trim()) continue
+      // Always use sequential 1-based numbering per subject
+      questionCounter++
+      out.questionId = String(questionCounter)
       rows.push(out)
     }
   }
