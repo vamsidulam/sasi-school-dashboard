@@ -2,7 +2,7 @@ const SCHEME_FIELDS = [
   ['R', 'Right'],
   ['W', 'Wrong'],
   ['L', 'Left'],
-  ['C', 'Bonus'],
+  ['B', 'Bonus'],
 ]
 
 function Label({ children, className = '' }) {

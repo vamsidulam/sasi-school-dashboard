@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { heatColor } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 function PillToggle({ options, value, onChange }) {
   return (
@@ -32,7 +32,7 @@ export default function TopicMastery({ filters, ready }) {
   const [meta, setMeta] = useState({ minQuestions: 4, taggedAnswers: 0, totalAnswers: 0 })
 
   useEffect(() => {
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setLoading(false)
       return
     }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Download, Loader2, X, CheckCircle, AlertCircle, FileDown } from 'lucide-react'
 import { fmt } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 const COLS = [
   ['rank', 'Rank'],
@@ -190,7 +190,7 @@ export default function Leaderboard({ filters, ready, setModal }) {
   })
 
   useEffect(() => {
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setLoading(false)
       setItems([])
       return

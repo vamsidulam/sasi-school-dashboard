@@ -10,7 +10,7 @@ import {
   Cell,
 } from 'recharts'
 import { TOOLTIP_STYLE, AXIS_TICK, fmt } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 export default function TestTrendGrowth({ filters, ready }) {
   const [loading, setLoading] = useState(false)
@@ -19,7 +19,7 @@ export default function TestTrendGrowth({ filters, ready }) {
   const [summary, setSummary] = useState(null)
 
   useEffect(() => {
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setGrowthData([])
       return
     }

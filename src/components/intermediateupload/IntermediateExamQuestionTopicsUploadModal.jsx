@@ -45,6 +45,7 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
   const [streamId, setStreamId] = useState('')
   const [yearId, setYearId] = useState('')
   const [examId, setExamId] = useState('')
+  const [selectedSubjectId, setSelectedSubjectId] = useState('')
 
   const [file, setFile] = useState(null)
   const [subjectConfig, setSubjectConfig] = useState({})
@@ -158,6 +159,7 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
       setStreamId('')
       setYearId('')
       setExamId('')
+      setSelectedSubjectId('')
       setFile(null)
       setSubjectConfig({})
       setColumnMappings(emptyColumnMappings())
@@ -200,7 +202,11 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
     setError(null)
     setResult(null)
     if (!selectedExam) return setError('Select an exam first.')
+    if (!selectedSubjectId) return setError('Select a subject first.')
     if (!file) return setError('Pick a file before uploading.')
+
+    const conf = subjectConfig[selectedSubjectId]
+    const label = subjectsById[selectedSubjectId]?.name || selectedSubjectId
 
     // Validate column mappings (global)
     for (const f of COLUMN_FIELDS) {
@@ -209,28 +215,27 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
       }
     }
 
-    // Validate per-subject configs
-    const cleanedConfig = {}
-    for (const [sid, conf] of Object.entries(subjectConfig)) {
-      const label = subjectsById[sid]?.name || sid
-      let startN = null
-      let endN = null
-      if (conf.startRow && String(conf.startRow).trim()) {
-        startN = Number(conf.startRow)
-        if (!Number.isInteger(startN) || startN < 2) {
-          return setError(`Subject "${label}": Start row must be ≥ 2 (row 1 is the header).`)
-        }
+    // Validate selected subject's config
+    let startN = null
+    let endN = null
+    if (conf.startRow && String(conf.startRow).trim()) {
+      startN = Number(conf.startRow)
+      if (!Number.isInteger(startN) || startN < 2) {
+        return setError(`Subject "${label}": Start row must be ≥ 2 (row 1 is the header).`)
       }
-      if (conf.endRow && String(conf.endRow).trim()) {
-        endN = Number(conf.endRow)
-        if (!Number.isInteger(endN) || endN < 2) {
-          return setError(`Subject "${label}": End row must be ≥ 2.`)
-        }
+    }
+    if (conf.endRow && String(conf.endRow).trim()) {
+      endN = Number(conf.endRow)
+      if (!Number.isInteger(endN) || endN < 2) {
+        return setError(`Subject "${label}": End row must be ≥ 2.`)
       }
-      if (startN !== null && endN !== null && endN < startN) {
-        return setError(`Subject "${label}": End row must be ≥ Start row.`)
-      }
-      cleanedConfig[sid] = {
+    }
+    if (startN !== null && endN !== null && endN < startN) {
+      return setError(`Subject "${label}": End row must be ≥ Start row.`)
+    }
+
+    const cleanedConfig = {
+      [selectedSubjectId]: {
         tabName: conf.tabName.trim() || null,
         startRow: startN,
         endRow: endN,
@@ -253,7 +258,7 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
 
       if (!rows.length) {
         throw new Error(
-          'No usable rows found. Check per-subject tab names + ranges and column mappings.',
+          'No usable rows found. Check tab name, row range, and column mappings.',
         )
       }
 
@@ -427,88 +432,92 @@ export default function IntermediateExamQuestionTopicsUploadModal({ open, onClos
             </p>
           </section>
 
-          {/* Step 3 — per-subject ranges */}
+          {/* Step 3 — subject selection and config */}
           {selectedExam ? (
             <section className="space-y-3 rounded-md border border-brand-200 bg-brand-50/30 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="rounded bg-brand-200/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-900">
-                    Step 3
-                  </span>
-                  <h3 className="text-sm font-semibold text-gray-900">Per-subject ranges</h3>
-                </div>
-                {subjectIds.length > 1 ? (
-                  <button
-                    type="button"
-                    onClick={copyFirstSubjectMeta}
-                    disabled={submitting}
-                    className="rounded-md border border-brand-200 bg-white px-2.5 py-1 text-[11px] font-medium text-brand-700 hover:bg-brand-100 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Copy 1st subject's tab/rows to all
-                  </button>
-                ) : null}
+              <div className="flex items-center gap-2">
+                <span className="rounded bg-brand-200/70 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand-900">
+                  Step 3
+                </span>
+                <h3 className="text-sm font-semibold text-gray-900">Select subject and configure</h3>
               </div>
               <p className="text-[11px] text-gray-600">
-                One block per subject in the exam. Specify which tab and which row range
-                contains that subject's questions. Tab/rows can be the same or different per subject.
+                Select a subject from this exam, then specify which sheet/tab and row range contains
+                that subject's data.
               </p>
               <div className="space-y-3">
-                {subjectIds.map((sid) => {
-                  const conf = subjectConfig[sid]
-                  const qCount = selectedExam.subjects?.[sid] ?? 0
-                  const displayName = subjectsById[sid]?.name || sid
-                  return (
-                    <div key={sid} className="rounded-md border border-gray-200 bg-white p-3">
-                      <div className="mb-2 flex items-center gap-2">
-                        <span className="text-sm font-semibold text-gray-900 capitalize">
-                          {displayName}
-                        </span>
-                        <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
-                          {qCount} questions
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1 text-[11px] font-medium text-gray-700">
-                          Sheet / Tab name
-                          <input
-                            type="text"
-                            value={conf.tabName}
-                            onChange={(e) => setSubjectField(sid, 'tabName', e.target.value)}
-                            disabled={submitting}
-                            placeholder="Leave empty = first sheet"
-                            className={inputCls}
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1 text-[11px] font-medium text-gray-700">
-                          Start row (Excel #)
-                          <input
-                            type="number"
-                            min="2"
-                            step="1"
-                            value={conf.startRow}
-                            onChange={(e) => setSubjectField(sid, 'startRow', e.target.value)}
-                            disabled={submitting}
-                            placeholder="2 = first data row"
-                            className={inputCls}
-                          />
-                        </label>
-                        <label className="flex flex-col gap-1 text-[11px] font-medium text-gray-700">
-                          End row (Excel #)
-                          <input
-                            type="number"
-                            min="2"
-                            step="1"
-                            value={conf.endRow}
-                            onChange={(e) => setSubjectField(sid, 'endRow', e.target.value)}
-                            disabled={submitting}
-                            placeholder="Empty = last row"
-                            className={inputCls}
-                          />
-                        </label>
-                      </div>
+                <label className="flex flex-col gap-1 text-xs font-medium text-gray-700">
+                  Subject <span className="text-red-500">*</span>
+                  <select
+                    value={selectedSubjectId}
+                    onChange={(e) => setSelectedSubjectId(e.target.value)}
+                    disabled={submitting || !subjectIds.length}
+                    className={selectCls}
+                  >
+                    <option value="">Choose a subject…</option>
+                    {subjectIds.map((sid) => {
+                      const qCount = selectedExam.subjects?.[sid] ?? 0
+                      const displayName = subjectsById[sid]?.name || sid
+                      return (
+                        <option key={sid} value={sid}>
+                          {displayName} ({qCount} questions)
+                        </option>
+                      )
+                    })}
+                  </select>
+                </label>
+
+                {selectedSubjectId && (
+                  <div className="rounded-md border border-gray-200 bg-white p-3">
+                    <div className="mb-3 flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900 capitalize">
+                        {subjectsById[selectedSubjectId]?.name || selectedSubjectId}
+                      </span>
+                      <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                        {selectedExam.subjects?.[selectedSubjectId] ?? 0} questions
+                      </span>
                     </div>
-                  )
-                })}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <label className="flex flex-col gap-1 text-[11px] font-medium text-gray-700">
+                        Sheet / Tab name
+                        <input
+                          type="text"
+                          value={subjectConfig[selectedSubjectId]?.tabName || ''}
+                          onChange={(e) => setSubjectField(selectedSubjectId, 'tabName', e.target.value)}
+                          disabled={submitting}
+                          placeholder="Leave empty = first sheet"
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-[11px] font-medium text-gray-700">
+                        Start row (Excel #) <span className="text-red-500">*</span>
+                        <input
+                          type="number"
+                          min="2"
+                          step="1"
+                          value={subjectConfig[selectedSubjectId]?.startRow || '2'}
+                          onChange={(e) => setSubjectField(selectedSubjectId, 'startRow', e.target.value)}
+                          disabled={submitting}
+                          placeholder="2 = first data row"
+                          className={inputCls}
+                        />
+                      </label>
+                      <label className="flex flex-col gap-1 text-[11px] font-medium text-gray-700">
+                        End row (Excel #)
+                        <input
+                          type="number"
+                          min="2"
+                          step="1"
+                          value={subjectConfig[selectedSubjectId]?.endRow || ''}
+                          onChange={(e) => setSubjectField(selectedSubjectId, 'endRow', e.target.value)}
+                          disabled={submitting}
+                          placeholder="Empty = last row"
+                          className={inputCls}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           ) : null}

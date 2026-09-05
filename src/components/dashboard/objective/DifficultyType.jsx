@@ -15,7 +15,7 @@ import {
   Cell,
 } from 'recharts'
 import { heatColor, TOOLTIP_STYLE, AXIS_TICK } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 const LEVEL_ORDER = ['Easy', 'Moderate', 'Difficult', 'Hard', 'Unspecified']
 
@@ -40,7 +40,7 @@ export default function DifficultyType({ filters, ready }) {
   const [meta, setMeta] = useState({ minQuestions: 4, taggedAnswers: 0, totalAnswers: 0 })
 
   useEffect(() => {
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setLoading(false)
       return
     }

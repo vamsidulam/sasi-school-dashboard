@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { categorizeBySipi, namedSubtopics } from './categorizeBySipi.js';
 
 // Helper function to get heat map color based on percentage
 function getHeatColor(percentage) {
@@ -210,7 +211,9 @@ export function generateStudentPDF(studentCode, data, diagnostics) {
     currentY += 5;
   }
 
-  // Strong Topics (from Level 1 Table 2) - Grid format
+  // Strong / Weak topics & subtopics — categorized by SIPI (higher = weaker)
+  const { strong: strongTopics, weak: weakTopics } = categorizeBySipi(diagnostics?.table6?.topics);
+  const { strong: strongSubtopics, weak: weakSubtopics } = categorizeBySipi(namedSubtopics(diagnostics?.table6?.subtopics));
 
   if (currentY > 240) {
     doc.addPage();
@@ -219,28 +222,18 @@ export function generateStudentPDF(studentCode, data, diagnostics) {
 
   doc.setFontSize(11);
   doc.setTextColor(0, 0, 0);
-  doc.text('STRONG TOPICS (TOP 10)',28.35,currentY);
+  doc.text('STRONG TOPICS (LOWEST SIPI)', 28.35, currentY);
   currentY += 5;
-
-  const strongTopics = diagnostics?.table2?.topics
-    ? diagnostics.table2.topics
-        .filter(t => t.combinedIndex != null && t.combinedIndex >= 70)
-        .sort((a, b) => (b.combinedIndex || 0) - (a.combinedIndex || 0))
-        .slice(0, 10)
-    : [];
 
   if (strongTopics.length > 0) {
-    const topicsData = strongTopics.map(t => {
-      return [
-        (t.topicName || 'Unknown').substring(0, 35),
-        t.subjectName || '-',
-        t.combinedIndex != null ? t.combinedIndex.toFixed(0) + '%' : '-'
-      ];
-    });
-
     autoTable(doc, {
       startY: currentY,
-      body: topicsData,
+      head: [['Topic', 'Subject', 'SIPI']],
+      body: strongTopics.map((t) => [
+        (t.topicName || 'Unknown').substring(0, 35),
+        t.subjectName || '-',
+        t.SIPI != null ? String(Math.round(t.SIPI)) : '-',
+      ]),
       theme: 'grid',
       margin: { left: 28.35, right: 28.35, top: 28.35, bottom: 28.35 },
       styles: { fontSize: 8, cellPadding: 2 },
@@ -253,41 +246,28 @@ export function generateStudentPDF(studentCode, data, diagnostics) {
     currentY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : currentY + 40;
   } else {
     doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text('No strong topics yet - keep working!',28.35,currentY + 3);
+    doc.text('No strong topics yet', 28.35, currentY + 3);
     currentY += 15;
   }
 
-  // Weak Topics (from Level 1 Table 2) - Grid format
   if (currentY > 240) {
     doc.addPage();
     currentY = 20;
   }
 
   doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-  doc.text('WEAK SUBTOPICS - PRIORITY FOCUS AREAS (TOP 10)',28.35,currentY);
+  doc.text('WEAK TOPICS (HIGHEST SIPI)', 28.35, currentY);
   currentY += 5;
-
-  const weakTopics = diagnostics?.table2?.topics
-    ? diagnostics.table2.topics
-        .filter(t => t.combinedIndex != null && t.combinedIndex < 50)
-        .sort((a, b) => (a.combinedIndex || 0) - (b.combinedIndex || 0))
-        .slice(0, 10)
-    : [];
 
   if (weakTopics.length > 0) {
-    const weakTopicsData = weakTopics.map(t => {
-      return [
-        (t.topicName || 'Unknown').substring(0, 35),
-        t.subjectName || '-',
-        t.combinedIndex != null ? t.combinedIndex.toFixed(0) + '%' : '-'
-      ];
-    });
-
     autoTable(doc, {
       startY: currentY,
-      body: weakTopicsData,
+      head: [['Topic', 'Subject', 'SIPI']],
+      body: weakTopics.map((t) => [
+        (t.topicName || 'Unknown').substring(0, 35),
+        t.subjectName || '-',
+        t.SIPI != null ? String(Math.round(t.SIPI)) : '-',
+      ]),
       theme: 'grid',
       margin: { left: 28.35, right: 28.35, top: 28.35, bottom: 28.35 },
       styles: { fontSize: 8, cellPadding: 2 },
@@ -300,49 +280,28 @@ export function generateStudentPDF(studentCode, data, diagnostics) {
     currentY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : currentY + 40;
   } else {
     doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Great! No weak topics found',28.35,currentY + 3);
+    doc.text('No weak topics — SIPI is low across topics', 28.35, currentY + 3);
     currentY += 15;
   }
 
-  // Strong Subtopics (from Level 1 Table 3) - Grid format
   if (currentY > 240) {
     doc.addPage();
     currentY = 20;
   }
 
   doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-  doc.text('STRONG SUBTOPICS (TOP 10)',28.35,currentY);
+  doc.text('STRONG SUBTOPICS (LOWEST SIPI)', 28.35, currentY);
   currentY += 5;
-
-  // Remove duplicates from subtopics
-  const allStrongSubtopics = diagnostics?.table3?.subtopics || [];
-  const uniqueStrongSubtopics = allStrongSubtopics.reduce((acc, current) => {
-    const key = `${current.subjectName}-${current.topicName}-${current.subtopicName}`;
-    if (!acc.some(item => `${item.subjectName}-${item.topicName}-${item.subtopicName}` === key)) {
-      acc.push(current);
-    }
-    return acc;
-  }, []);
-
-  const strongSubtopics = uniqueStrongSubtopics
-    .filter(st => st.combinedIndex != null && st.combinedIndex >= 70)
-    .sort((a, b) => (b.combinedIndex || 0) - (a.combinedIndex || 0))
-    .slice(0, 10);
 
   if (strongSubtopics.length > 0) {
-    const strongSubtopicsData = strongSubtopics.map(st => {
-      return [
-        st.subtopicName || 'General',
-        `${st.topicName || 'Unspecified'} • ${st.subjectName || '-'}`,
-        st.combinedIndex != null ? st.combinedIndex.toFixed(0) + '%' : '-'
-      ];
-    });
-
     autoTable(doc, {
       startY: currentY,
-      body: strongSubtopicsData,
+      head: [['Subtopic', 'Topic • Subject', 'SIPI']],
+      body: strongSubtopics.map((st) => [
+        st.subtopicName || 'General',
+        `${st.topicName || 'Unspecified'} • ${st.subjectName || '-'}`,
+        st.SIPI != null ? String(Math.round(st.SIPI)) : '-',
+      ]),
       theme: 'grid',
       margin: { left: 28.35, right: 28.35, top: 28.35, bottom: 28.35 },
       styles: { fontSize: 7, cellPadding: 2, textColor: [0, 0, 0] },
@@ -355,49 +314,28 @@ export function generateStudentPDF(studentCode, data, diagnostics) {
     currentY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : currentY + 40;
   } else {
     doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Not enough subtopic data.',28.35,currentY + 3);
+    doc.text('No strong subtopics yet', 28.35, currentY + 3);
     currentY += 15;
   }
 
-  // Weak Subtopics (from Level 1 Table 3) - Grid format
   if (currentY > 240) {
     doc.addPage();
     currentY = 20;
   }
 
   doc.setFontSize(11);
-  doc.setTextColor(0, 0, 0);
-  doc.text('WEAK SUBTOPICS - PRIORITY FOCUS AREAS (TOP 10)',28.35,currentY);
+  doc.text('WEAK SUBTOPICS (HIGHEST SIPI)', 28.35, currentY);
   currentY += 5;
 
-  // Remove duplicates from subtopics
-  const allWeakSubtopics = diagnostics?.table3?.subtopics || [];
-  const uniqueWeakSubtopics = allWeakSubtopics.reduce((acc, current) => {
-    const key = `${current.subjectName}-${current.topicName}-${current.subtopicName}`;
-    if (!acc.some(item => `${item.subjectName}-${item.topicName}-${item.subtopicName}` === key)) {
-      acc.push(current);
-    }
-    return acc;
-  }, []);
-
-  const weakSubtopics = uniqueWeakSubtopics
-    .filter(st => st.combinedIndex != null && st.combinedIndex < 50)
-    .sort((a, b) => (a.combinedIndex || 0) - (b.combinedIndex || 0))
-    .slice(0, 10);
-
   if (weakSubtopics.length > 0) {
-    const weakSubtopicsData = weakSubtopics.map(st => {
-      return [
-        st.subtopicName || 'General',
-        `${st.topicName || 'Unspecified'} • ${st.subjectName || '-'}`,
-        st.combinedIndex != null ? st.combinedIndex.toFixed(0) + '%' : '-'
-      ];
-    });
-
     autoTable(doc, {
       startY: currentY,
-      body: weakSubtopicsData,
+      head: [['Subtopic', 'Topic • Subject', 'SIPI']],
+      body: weakSubtopics.map((st) => [
+        st.subtopicName || 'General',
+        `${st.topicName || 'Unspecified'} • ${st.subjectName || '-'}`,
+        st.SIPI != null ? String(Math.round(st.SIPI)) : '-',
+      ]),
       theme: 'grid',
       margin: { left: 28.35, right: 28.35, top: 28.35, bottom: 28.35 },
       styles: { fontSize: 7, cellPadding: 2, textColor: [0, 0, 0] },
@@ -410,8 +348,7 @@ export function generateStudentPDF(studentCode, data, diagnostics) {
     currentY = doc.lastAutoTable?.finalY ? doc.lastAutoTable.finalY + 10 : currentY + 40;
   } else {
     doc.setFontSize(9);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Excellent! No weak subtopics',28.35,currentY + 3);
+    doc.text('No weak subtopics — SIPI is low across subtopics', 28.35, currentY + 3);
     currentY += 15;
   }
 

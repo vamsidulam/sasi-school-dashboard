@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 import { fmt, pct } from './utils.js'
 
 function KpiCard({ label, value, sub }) {
@@ -255,7 +255,7 @@ export default function BranchAnalysis({ filters, ready }) {
                     <tr>
                       <th className="px-2 py-1.5 text-left text-[9px] font-semibold text-gray-500">#</th>
                       <th className="px-2 py-1.5 text-left text-[9px] font-semibold text-gray-500">Branch</th>
-                      <th className="px-2 py-1.5 text-right text-[9px] font-semibold text-gray-500">Avg</th>
+                      <th className="px-2 py-1.5 text-right text-[9px] font-semibold text-gray-500">Accuracy</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -263,7 +263,7 @@ export default function BranchAnalysis({ filters, ready }) {
                       <tr key={r.branch} className={r.rank === 1 ? 'bg-green-50/50' : ''}>
                         <td className="border-t border-gray-50 px-2 py-1.5 font-mono font-bold text-gray-500">{r.rank}</td>
                         <td className="border-t border-gray-50 px-2 py-1.5 font-medium text-gray-800">{r.branch}</td>
-                        <td className="border-t border-gray-50 px-2 py-1.5 text-right font-mono font-semibold text-gray-700">{fmt(r.avgScore)}</td>
+                        <td className="border-t border-gray-50 px-2 py-1.5 text-right font-mono font-semibold text-gray-700">{r.accuracy != null ? r.accuracy.toFixed(1) + '%' : '—'}</td>
                       </tr>
                     ))}
                   </tbody>

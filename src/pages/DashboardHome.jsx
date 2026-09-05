@@ -1,40 +1,8 @@
-import { useState } from 'react'
-import { useOutletContext } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { GraduationCap, Users, TrendingUp, Award, BookOpen } from 'lucide-react'
-import SchoolDashboard from '../components/dashboard/SchoolDashboard.jsx'
-import { SchoolDashboardAnalytics } from '../components/school-dashboard/index.js'
-import IntermediateDashboard from '../components/intermediate/IntermediateDashboard.jsx'
-import { useAcademicYear } from '../contexts/AcademicYearContext.jsx'
-import * as intApi from '../lib/intermediateboardApi.js'
 
 export default function DashboardHome() {
-  const [selectedDashboard, setSelectedDashboard] = useState(null)
-  const { setSidebarCollapsed } = useOutletContext()
-  const { selectedYear, setSource } = useAcademicYear()
-
-  const handleSelectDashboard = (type) => {
-    setSelectedDashboard(type)
-    setSidebarCollapsed(true)
-    setSource(type === 'objective' ? 'objective' : type === 'intermediate' ? 'intermediate' : 'school')
-  }
-
-  const handleBack = () => {
-    setSelectedDashboard(null)
-    setSidebarCollapsed(false)
-    setSource('school')
-  }
-
-  if (selectedDashboard === 'school') {
-    return <SchoolDashboardAnalytics onBack={handleBack} label="School" />
-  }
-
-  if (selectedDashboard === 'intermediate') {
-    return <SchoolDashboardAnalytics onBack={handleBack} label="Intermediate" />
-  }
-
-  if (selectedDashboard === 'objective') {
-    return <IntermediateDashboard onBack={handleBack} />
-  }
+  const navigate = useNavigate()
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -51,7 +19,7 @@ export default function DashboardHome() {
         {/* School Dashboard Card */}
         <button
           type="button"
-          onClick={() => handleSelectDashboard('school')}
+          onClick={() => navigate('/dashboard/school')}
           className="group relative overflow-hidden rounded-2xl border-2 border-gray-200 bg-white p-8 text-left shadow-sm transition-all hover:border-brand-500 hover:shadow-xl"
         >
           <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-brand-50 opacity-50 transition-transform group-hover:scale-150" />
@@ -93,7 +61,7 @@ export default function DashboardHome() {
         {/* Intermediate Dashboard Card */}
         <button
           type="button"
-          onClick={() => handleSelectDashboard('intermediate')}
+          onClick={() => navigate('/dashboard/intermediate')}
           className="group relative overflow-hidden rounded-2xl border-2 border-gray-200 bg-white p-8 text-left shadow-sm transition-all hover:border-purple-500 hover:shadow-xl"
         >
           <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-purple-50 opacity-50 transition-transform group-hover:scale-150" />
@@ -135,7 +103,7 @@ export default function DashboardHome() {
         {/* Objective Dashboard Card */}
         <button
           type="button"
-          onClick={() => handleSelectDashboard('objective')}
+          onClick={() => navigate('/dashboard/objective')}
           className="group relative overflow-hidden rounded-2xl border-2 border-gray-200 bg-white p-8 text-left shadow-sm transition-all hover:border-red-500 hover:shadow-xl"
         >
           <div className="absolute right-0 top-0 h-32 w-32 -translate-y-8 translate-x-8 rounded-full bg-red-50 opacity-50 transition-transform group-hover:scale-150" />

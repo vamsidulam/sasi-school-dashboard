@@ -3,7 +3,10 @@ import {
   BarChart3,
   ClipboardList,
   Users,
+  FileText,
   Settings,
+  Trash2,
+  PlusSquare,
   ChevronLeft,
   ChevronRight,
   LogOut,
@@ -12,8 +15,10 @@ import { useAuth } from '../hooks/useAuth.js'
 
 const NAV = [
   { to: '/dashboard', label: 'Analysis', icon: BarChart3 },
+  { to: '/overview', label: 'Overview', icon: FileText },
   { to: '/exams', label: 'Exams', icon: ClipboardList },
   { to: '/students', label: 'Students', icon: Users },
+  { to: '/data-management', label: 'Data Mgmt', icon: Trash2 },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 

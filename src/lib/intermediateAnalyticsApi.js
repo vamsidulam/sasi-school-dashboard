@@ -38,7 +38,6 @@ export function buildFilterQuery(filters) {
   const qs = new URLSearchParams()
   const keys = [
     'streamid',
-    'yearid',
     'examtypeid',
     'branchid',
     'academicyearid',
@@ -57,6 +56,16 @@ export function buildFilterQuery(filters) {
 }
 
 export const intAnalyticsApi = {
+  studentSearch: (search, cursor, limit, filters = {}) => {
+    const qs = new URLSearchParams()
+    if (search) qs.set('search', search)
+    if (cursor) qs.set('cursor', cursor)
+    if (limit) qs.set('limit', String(limit))
+    if (filters.academicyearid) qs.set('academicyearid', filters.academicyearid)
+    if (filters.streamid) qs.set('streamid', filters.streamid)
+    if (filters.branchid) qs.set('branchid', filters.branchid)
+    return request(`/students?${qs.toString()}`)
+  },
   headerFilters: (params = {}) => {
     const qs = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
@@ -114,52 +123,55 @@ export const intAnalyticsApi = {
 
   // Diagnostics endpoints - NEW Level 1 Routes
   diagnosticsLevel1Table1: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level1table1?${qs.toString()}`)
   },
   diagnosticsLevel1Table2: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level1table2?${qs.toString()}`)
   },
   diagnosticsLevel1Table3: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level1table3?${qs.toString()}`)
   },
   diagnosticsLevel2Table1: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level2table1?${qs.toString()}`)
   },
   diagnosticsLevel2Table2: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level2table2?${qs.toString()}`)
   },
   diagnosticsLevel2Table1Detailed: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level2table1-detailed?${qs.toString()}`)
   },
   diagnosticsLevel2Table2Detailed: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level2table2-detailed?${qs.toString()}`)
   },
   diagnosticsLevel3: (studentCode, filters) => {
-    const qs = new URLSearchParams()
+    const qs = new URLSearchParams(buildFilterQuery(filters))
     qs.set('studentCode', studentCode)
-    qs.set('streamid', filters.streamid)
     return request(`/diagnostics/level3?${qs.toString()}`)
+  },
+  diagnosticsReport: (studentCode, filters) => {
+    const qs = new URLSearchParams(buildFilterQuery(filters))
+    qs.set('studentCode', studentCode)
+    return request(`/diagnostics/report?${qs.toString()}`)
+  },
+  sparkInsights: (studentCode, filters) => {
+    return request('/diagnostics/spark-insights', {
+      method: 'POST',
+      body: JSON.stringify({ studentCode, filters }),
+    })
   },
 
   // Diagnostics endpoints - OLD (kept for backward compatibility)
@@ -204,6 +216,15 @@ export const intAnalyticsApi = {
     }
     return response.blob()
   },
+
+  // Bulk Download Temporal (async email-based)
+  bulkDownloadStart: (filters, email, requestedBy, studentCodes = null) =>
+    request('/bulk-download/start', {
+      method: 'POST',
+      body: JSON.stringify({ filters, email, requestedBy, studentCodes }),
+    }),
+  bulkDownloadStatus: (jobId) =>
+    request(`/bulk-download/status/${jobId}`),
 
   // Branch Analysis endpoints
   branchSummary: (filters) =>

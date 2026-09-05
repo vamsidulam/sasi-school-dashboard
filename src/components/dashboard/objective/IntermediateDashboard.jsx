@@ -1,27 +1,27 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import IntermediateHeader from './IntermediateHeader.jsx'
 import Overview from './Overview.jsx'
 import BranchAnalysis from './BranchAnalysis.jsx'
-import Diagnostics from './Diagnostics.jsx'
 import GrandCombined from './GrandCombined.jsx'
 import Leaderboard from './Leaderboard.jsx'
 import TopicMastery from './TopicMastery.jsx'
 import DifficultyType from './DifficultyType.jsx'
 import TestTrend from './TestTrend.jsx'
-import StudentModal from './StudentModal.jsx'
 import StudentModalApi from './StudentModalApi.jsx'
 
 import { pct } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
-import { useAcademicYear } from '../../contexts/AcademicYearContext.jsx'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
+import { useAcademicYear } from '../../../contexts/AcademicYearContext.jsx'
 
-export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.json', onBack }) {
+export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.json', onBack, activeSection = 'overview', onSectionChange }) {
   const { selectedYear } = useAcademicYear()
+
+  const tab = activeSection
+  const setTab = onSectionChange || (() => {})
 
   const [data, setData] = useState(null)
   const [err, setErr] = useState(null)
-  const [tab, setTab] = useState('overview')
   const [subject, setSubject] = useState('ALL')
   const [scheme, setScheme] = useState({ R: 4, W: -1, L: 0, C: 4 })
   const [sortKey, setSortKey] = useState('total')
@@ -34,18 +34,17 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
   const [loadingHeader, setLoadingHeader] = useState(true)
 
   const [streamid, setStreamid] = useState('')
-  const [yearid, setYearid] = useState('')
   const [examtypeid, setExamtypeid] = useState('')
   const [branchid, setBranchid] = useState('')
   const academicyearid = selectedYear || ''
   const [exam, setExam] = useState('ALL')
 
   const [overviewCounts, setOverviewCounts] = useState({ students: 0, tests: 0 })
+  const [otherStreams, setOtherStreams] = useState([])
 
   const analyticsFilters = useMemo(
     () => ({
       streamid: streamid && streamid !== 'ALL' ? streamid : undefined,
-      yearid,
       examtypeid: examtypeid && examtypeid !== 'ALL' ? examtypeid : undefined,
       branchid: branchid && branchid !== 'ALL' ? branchid : undefined,
       academicyearid: academicyearid && academicyearid !== 'ALL' ? academicyearid : undefined,
@@ -56,10 +55,10 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
       schemeL: scheme.L,
       schemeC: scheme.C,
     }),
-    [streamid, yearid, examtypeid, branchid, academicyearid, subject, exam, scheme],
+    [streamid, examtypeid, branchid, academicyearid, subject, exam, scheme],
   )
 
-  const filtersReady = Boolean(streamid && streamid !== 'ALL' && yearid && examtypeid && examtypeid !== 'ALL')
+  const filtersReady = Boolean(streamid && streamid !== 'ALL' && examtypeid && examtypeid !== 'ALL')
 
   useEffect(() => {
     let cancelled = false
@@ -67,7 +66,6 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     intAnalyticsApi
       .headerFilters({
         streamid: streamid && streamid !== 'ALL' ? streamid : undefined,
-        yearid: yearid || undefined,
         branchid: branchid && branchid !== 'ALL' ? branchid : undefined,
         examtypeid: examtypeid && examtypeid !== 'ALL' ? examtypeid : undefined,
         academicyearid: academicyearid && academicyearid !== 'ALL' ? academicyearid : undefined,
@@ -78,9 +76,6 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         setHeaderErr(null)
         if ((!streamid || streamid === 'ALL') && meta.streams?.length) {
           setStreamid(meta.streams[0].id)
-        }
-        if (!yearid && meta.years?.length) {
-          setYearid(meta.years[0].id)
         }
         if (!examtypeid && meta.examTypes?.length) {
           const grand = meta.examTypes.find((t) => t.name === 'GRAND')
@@ -96,7 +91,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
     return () => {
       cancelled = true
     }
-  }, [streamid, yearid, branchid, examtypeid, academicyearid])
+  }, [streamid, branchid, examtypeid, academicyearid])
 
   useEffect(() => {
     if (!filtersReady) return
@@ -109,6 +104,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
             students: res.students ?? 0,
             tests: res.exams ?? res.testRecords ?? 0,
           })
+          setOtherStreams(res.otherStreams || [])
         }
       })
       .catch(() => {})
@@ -418,9 +414,6 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         examTypes={headerMeta?.examTypes || []}
         examtypeid={examtypeid}
         onExamTypeChange={setExamtypeid}
-        years={headerMeta?.years || []}
-        yearid={yearid}
-        onYearChange={setYearid}
         branches={headerMeta?.branches || []}
         branchid={branchid}
         onBranchChange={setBranchid}
@@ -432,6 +425,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         studentsCount={overviewCounts.students}
         testsCount={overviewCounts.tests}
         loadingFilters={loadingHeader}
+        otherStreams={otherStreams}
       />
 
       <div className="mx-auto max-w-[1480px] px-4 sm:px-6 lg:px-7">
@@ -448,11 +442,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
             <BranchAnalysis filters={analyticsFilters} ready={filtersReady} />
           )}
 
-          {tab === 'diagnostics' && (
-            <Diagnostics filters={analyticsFilters} ready={filtersReady} />
-          )}
-
-          {tab === 'leaderboard' && (
+          {tab === 'rankings' && (
             <Leaderboard
               filters={analyticsFilters}
               ready={filtersReady}
@@ -469,7 +459,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
           )}
 
           {tab !== 'overview' &&
-            tab !== 'leaderboard' &&
+            tab !== 'rankings' &&
             tab !== 'topics' &&
             tab !== 'difficulty' &&
             !data &&
@@ -481,7 +471,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
           )}
 
           {tab !== 'overview' &&
-            tab !== 'leaderboard' &&
+            tab !== 'rankings' &&
             tab !== 'topics' &&
             tab !== 'difficulty' &&
             err && (
@@ -491,7 +481,7 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
           )}
 
           {tab !== 'overview' &&
-            tab !== 'leaderboard' &&
+            tab !== 'rankings' &&
             tab !== 'topics' &&
             tab !== 'difficulty' &&
             tab === 'trend' && (
@@ -510,31 +500,16 @@ export default function IntermediateDashboard({ datasetUrl = '/offline-dataset.j
         </div>
       </div>
 
-      {modal && (tab === 'overview' || tab === 'leaderboard') && filtersReady && (
-        typeof modal === 'string' ? (
-          <StudentModalApi
-            studentCode={modal}
-            filters={analyticsFilters}
-            onClose={() => setModal(null)}
-          />
-        ) : (
-          <StudentModalApi
-            studentCode={modal.code}
-            filters={modal.scope === 'filtered' ? analyticsFilters : {
-              ...analyticsFilters,
-              exam: undefined,
-              subject: undefined,
-            }}
-            onClose={() => setModal(null)}
-          />
-        )
-      )}
-      {modal && tab !== 'overview' && tab !== 'leaderboard' && computed && (
-        <StudentModal
-          s={modal}
-          computed={computed}
+
+      {modal && filtersReady && (
+        <StudentModalApi
+          studentCode={modal.code || modal}
+          allFilters={analyticsFilters}
+          currentExam={exam !== 'ALL' ? exam : null}
+          currentSubject={subject !== 'ALL' ? subject : null}
+          streamName={headerMeta?.streams?.find(s => s.id === streamid)?.name || ''}
+          yearName=""
           onClose={() => setModal(null)}
-          kind={kind}
         />
       )}
       </div>

@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Download, Loader2, X, CheckCircle, AlertCircle } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { Download, Loader2, X, CheckCircle, AlertCircle, Mail } from 'lucide-react'
 import { fmt } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 const COLS = [
   ['rank', 'Rank'],
@@ -32,27 +32,101 @@ function Chip({ tone, children }) {
 }
 
 /**
+ * Email Input Modal
+ */
+function EmailModal({ show, onClose, onSubmit, studentCount, loading }) {
+  const [email, setEmail] = useState('')
+
+  if (!show) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Bulk Download Reports</h3>
+            <p className="mt-1 text-sm text-gray-600">
+              Generate PDFs for {studentCount} students. The ZIP file will be emailed to you.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">
+            Email Address
+          </label>
+          <div className="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-500/20">
+            <Mail className="h-4 w-4 text-gray-400" />
+            <input
+              type="email"
+              placeholder="your.email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && email.includes('@') && onSubmit(email)}
+              className="flex-1 border-none bg-transparent text-sm outline-none placeholder:text-gray-400"
+              autoFocus
+            />
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-4">
+          <p className="text-xs text-amber-800">
+            Reports will be generated in the background. You can close this page — the ZIP will be emailed when ready.
+          </p>
+        </div>
+
+        <div className="flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => onSubmit(email)}
+            disabled={!email.includes('@') || loading}
+            className="flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            Start Download
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/**
  * Progress Modal Component
  */
 function ProgressModal({ show, onClose, progress }) {
   if (!show) return null
 
-  const { status, current, total, message, errors, canClose } = progress
+  const { status, completed, total, message, zipUrl } = progress
+  const pct = total > 0 ? Math.round((completed / total) * 100) : 0
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-lg rounded-xl border border-gray-200 bg-white p-6 shadow-xl">
-        {/* Header */}
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h3 className="text-lg font-semibold text-gray-900">
-              {status === 'downloading' && 'Generating PDFs...'}
-              {status === 'complete' && 'Download Complete!'}
+              {status === 'processing' && 'Generating Reports...'}
+              {status === 'zipping' && 'Creating ZIP...'}
+              {status === 'emailing' && 'Sending Email...'}
+              {status === 'completed' && 'Download Complete!'}
               {status === 'error' && 'Download Failed'}
+              {status === 'queued' && 'Queued...'}
             </h3>
             <p className="mt-1 text-sm text-gray-600">{message}</p>
           </div>
-          {canClose && (
+          {(status === 'completed' || status === 'error') && (
             <button
               onClick={onClose}
               className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
@@ -63,20 +137,18 @@ function ProgressModal({ show, onClose, progress }) {
         </div>
 
         {/* Progress Bar */}
-        {status === 'downloading' && (
+        {(status === 'processing' || status === 'zipping' || status === 'emailing') && (
           <div className="mb-4">
             <div className="mb-2 flex items-center justify-between text-sm">
               <span className="font-medium text-gray-700">
-                Processing {current} of {total} batches
+                {completed} of {total} students
               </span>
-              <span className="font-mono text-brand-600">
-                {Math.round((current / total) * 100)}%
-              </span>
+              <span className="font-mono text-brand-600">{pct}%</span>
             </div>
             <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
               <div
-                className="h-full rounded-full bg-brand-600 transition-all duration-300"
-                style={{ width: `${(current / total) * 100}%` }}
+                className="h-full rounded-full bg-brand-600 transition-all duration-500"
+                style={{ width: `${pct}%` }}
               />
             </div>
           </div>
@@ -84,10 +156,10 @@ function ProgressModal({ show, onClose, progress }) {
 
         {/* Status Icon */}
         <div className="mb-4 flex justify-center">
-          {status === 'downloading' && (
+          {['processing', 'zipping', 'emailing', 'queued'].includes(status) && (
             <Loader2 className="h-12 w-12 animate-spin text-brand-600" />
           )}
-          {status === 'complete' && (
+          {status === 'completed' && (
             <CheckCircle className="h-12 w-12 text-green-600" />
           )}
           {status === 'error' && (
@@ -95,24 +167,29 @@ function ProgressModal({ show, onClose, progress }) {
           )}
         </div>
 
-        {/* Errors */}
-        {errors.length > 0 && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
-            <h4 className="mb-2 text-sm font-semibold text-red-900">
-              {errors.length} error(s) occurred:
-            </h4>
-            <div className="max-h-32 overflow-y-auto">
-              {errors.map((error, idx) => (
-                <div key={idx} className="text-xs text-red-700">
-                  • {error}
-                </div>
-              ))}
-            </div>
+        {/* Download link if available */}
+        {status === 'completed' && zipUrl && (
+          <div className="mb-4 text-center">
+            <a
+              href={zipUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              <Download className="h-4 w-4" />
+              Download ZIP
+            </a>
           </div>
         )}
 
-        {/* Actions */}
-        {canClose && (
+        {/* Close hint */}
+        {['processing', 'zipping', 'emailing', 'queued'].includes(status) && (
+          <div className="mt-4 text-center text-xs text-gray-500">
+            You can close this — the ZIP will be emailed when ready.
+          </div>
+        )}
+
+        {(status === 'completed' || status === 'error') && (
           <div className="flex justify-end gap-2">
             <button
               onClick={onClose}
@@ -120,13 +197,6 @@ function ProgressModal({ show, onClose, progress }) {
             >
               Close
             </button>
-          </div>
-        )}
-
-        {/* Loading hint */}
-        {status === 'downloading' && (
-          <div className="mt-4 text-center text-xs text-gray-500">
-            This may take a few minutes. Please don't close this window.
           </div>
         )}
       </div>
@@ -142,19 +212,27 @@ export default function Leaderboard({ filters, ready, setModal }) {
   const [sortKey, setSortKey] = useState('total')
   const [sortDir, setSortDir] = useState(-1)
 
-  // Progress tracking
+  // Bulk download state
+  const [showEmailModal, setShowEmailModal] = useState(false)
+  const [bulkLoading, setBulkLoading] = useState(false)
   const [showProgress, setShowProgress] = useState(false)
   const [progress, setProgress] = useState({
-    status: 'idle', // 'idle' | 'downloading' | 'complete' | 'error'
-    current: 0,
+    status: 'queued',
+    completed: 0,
     total: 0,
     message: '',
-    errors: [],
-    canClose: false,
+    zipUrl: null,
   })
+  const pollRef = useRef(null)
 
   useEffect(() => {
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setLoading(false)
       setItems([])
       return
@@ -204,151 +282,74 @@ export default function Leaderboard({ filters, ready, setModal }) {
   }
   const sArrow = (k) => (sortKey === k ? (sortDir < 0 ? ' ↓' : ' ↑') : '')
 
-  const handleBulkDownload = async () => {
+  const handleBulkDownload = () => {
+    const studentCodes = ranked.map(s => s.student)
+    if (studentCodes.length === 0) {
+      alert('No students to download')
+      return
+    }
+    setShowEmailModal(true)
+  }
+
+  const handleStartBulkDownload = async (email) => {
     try {
+      setBulkLoading(true)
       const studentCodes = ranked.map(s => s.student)
 
-      if (studentCodes.length === 0) {
-        alert('No students to download')
-        return
-      }
+      const res = await intAnalyticsApi.bulkDownloadStart(
+        filters,
+        email,
+        'dashboard-user',
+        studentCodes
+      )
 
-      // Confirm for large batches
-      if (studentCodes.length > 50) {
-        const confirmed = confirm(
-          `You are about to download ${studentCodes.length} PDFs.\n\n` +
-          `This will be split into ${Math.ceil(studentCodes.length / 100)} batch(es) of up to 100 students each.\n` +
-          `Each batch will download as a separate ZIP file.\n\n` +
-          `Continue?`
-        )
-        if (!confirmed) return
-      }
+      setShowEmailModal(false)
+      setBulkLoading(false)
 
-      // Split into chunks of 100
-      const BATCH_SIZE = 100
-      const batches = []
-      for (let i = 0; i < studentCodes.length; i += BATCH_SIZE) {
-        batches.push(studentCodes.slice(i, i + BATCH_SIZE))
-      }
-
-      console.log(`📦 Downloading ${studentCodes.length} students in ${batches.length} batch(es)`)
-
-      // Show progress modal
+      // Show progress modal and start polling
+      setProgress({
+        status: 'queued',
+        completed: 0,
+        total: studentCodes.length,
+        message: res.message || 'Job started...',
+        zipUrl: null,
+      })
       setShowProgress(true)
-      setProgress({
-        status: 'downloading',
-        current: 0,
-        total: batches.length,
-        message: `Preparing to download ${studentCodes.length} student reports...`,
-        errors: [],
-        canClose: false,
-      })
 
-      const batchErrors = []
-
-      // Download each batch sequentially
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i]
-        const batchNum = i + 1
-        const totalBatches = batches.length
-
-        setProgress(prev => ({
-          ...prev,
-          current: batchNum,
-          message: `Generating batch ${batchNum}/${totalBatches} (${batch.length} students)...`,
-        }))
-
-        console.log(`📥 Downloading batch ${batchNum}/${totalBatches} (${batch.length} students)...`)
-
+      // Poll for status
+      const jobId = res.jobId
+      pollRef.current = setInterval(async () => {
         try {
-          const blob = await intAnalyticsApi.bulkDownloadStudentsPdf(batch, filters)
+          const status = await intAnalyticsApi.bulkDownloadStatus(jobId)
+          setProgress({
+            status: status.status,
+            completed: status.progress?.completed || 0,
+            total: status.progress?.total || studentCodes.length,
+            message: status.message,
+            zipUrl: status.zipUrl || null,
+          })
 
-          // Validate blob
-          if (!blob || blob.size === 0) {
-            throw new Error('Received empty ZIP file')
+          if (status.status === 'completed' || status.status === 'error') {
+            clearInterval(pollRef.current)
+            pollRef.current = null
           }
-
-          // Check if blob is actually a JSON error response
-          const blobType = blob.type
-          if (blobType.includes('application/json')) {
-            const text = await blob.text()
-            const errorData = JSON.parse(text)
-            throw new Error(errorData.msg || 'Server returned an error')
-          }
-
-          // Create download link with batch number if multiple batches
-          const url = window.URL.createObjectURL(blob)
-          const a = document.createElement('a')
-          a.href = url
-          const timestamp = new Date().toISOString().split('T')[0]
-          a.download = totalBatches > 1
-            ? `student-diagnostics-${timestamp}-batch${batchNum}of${totalBatches}.zip`
-            : `student-diagnostics-${timestamp}.zip`
-          document.body.appendChild(a)
-          a.click()
-          document.body.removeChild(a)
-          window.URL.revokeObjectURL(url)
-
-          console.log(`✅ Batch ${batchNum}/${totalBatches} downloaded successfully`)
-
-          // Small delay between batches to avoid overwhelming browser
-          if (i < batches.length - 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000))
-          }
-
-        } catch (error) {
-          console.error(`❌ Batch ${batchNum}/${totalBatches} failed:`, error)
-          batchErrors.push(`Batch ${batchNum}: ${error.message}`)
-
-          setProgress(prev => ({
-            ...prev,
-            errors: [...prev.errors, `Batch ${batchNum} failed: ${error.message}`],
-          }))
-
-          const retry = confirm(
-            `Batch ${batchNum}/${totalBatches} failed: ${error.message}\n\n` +
-            `Continue with remaining batches?`
-          )
-          if (!retry) break
+        } catch (e) {
+          console.error('Status poll error:', e)
         }
-      }
-
-      // Update progress to complete
-      setProgress({
-        status: batchErrors.length === batches.length ? 'error' : 'complete',
-        current: batches.length,
-        total: batches.length,
-        message: batchErrors.length === 0
-          ? `Successfully downloaded ${batches.length} ZIP file(s) containing ${studentCodes.length} student PDFs!`
-          : `Downloaded ${batches.length - batchErrors.length}/${batches.length} batch(es). ${batchErrors.length} failed.`,
-        errors: batchErrors,
-        canClose: true,
-      })
-
+      }, 3000)
     } catch (error) {
-      console.error('Bulk download error:', error)
-      setProgress({
-        status: 'error',
-        current: 0,
-        total: 0,
-        message: 'Download failed',
-        errors: [error.message],
-        canClose: true,
-      })
+      setBulkLoading(false)
+      alert(`Failed to start bulk download: ${error.message}`)
     }
   }
 
   const handleCloseProgress = () => {
-    if (!progress.canClose) return
+    if (pollRef.current) {
+      clearInterval(pollRef.current)
+      pollRef.current = null
+    }
     setShowProgress(false)
-    setProgress({
-      status: 'idle',
-      current: 0,
-      total: 0,
-      message: '',
-      errors: [],
-      canClose: false,
-    })
+    setProgress({ status: 'queued', completed: 0, total: 0, message: '', zipUrl: null })
   }
 
   if (!ready) {
@@ -400,7 +401,14 @@ export default function Leaderboard({ filters, ready, setModal }) {
         <span className="rounded-md border border-gray-200 bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-600">
           {ranked.length} of {items.length} students
         </span>
-        
+
+        <button
+          onClick={handleBulkDownload}
+          className="ml-auto flex items-center gap-2 rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 transition"
+        >
+          <Download className="h-4 w-4" />
+          Bulk Download
+        </button>
       </div>
 
       <div className="max-h-[640px] overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -458,6 +466,15 @@ export default function Leaderboard({ filters, ready, setModal }) {
           </tbody>
         </table>
       </div>
+
+      {/* Email Modal */}
+      <EmailModal
+        show={showEmailModal}
+        onClose={() => setShowEmailModal(false)}
+        onSubmit={handleStartBulkDownload}
+        studentCount={ranked.length}
+        loading={bulkLoading}
+      />
 
       {/* Progress Modal */}
       <ProgressModal

@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { fmt, pct, heatColor, TOOLTIP_STYLE, TOOLTIP_LABEL_STYLE, AXIS_TICK } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 const KPI_COLORS = {
   red700: 'text-brand-700',
@@ -85,7 +85,7 @@ export default function Overview({ filters, setModal, ready }) {
   const [weakTopics, setWeakTopics] = useState([])
 
   useEffect(() => {
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setLoading(false)
       return
     }
@@ -159,7 +159,7 @@ export default function Overview({ filters, setModal, ready }) {
       p: testAvg?.avg != null && topScore ? pct(testAvg.avg, topScore) : 0,
     },
     {
-      label: 'Score',
+      label: 'Highest Score',
       value: scoreRange?.top != null ? fmt(scoreRange.top) : '—',
       sub:
         scoreRange?.low != null ? `Lowest ${fmt(scoreRange.low)}` : '—',

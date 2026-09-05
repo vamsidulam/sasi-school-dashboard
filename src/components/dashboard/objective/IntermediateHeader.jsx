@@ -5,8 +5,7 @@ const STREAM_LABEL = { JSP: '· MPC', JSN: '· NEET' }
 const TAB_DEFS = [
   ['overview', 'Overview'],
   ['branch', 'Branch Analysis'],
-  ['diagnostics', 'Diagnostics'],
-  ['leaderboard', 'Rankings'],
+  ['rankings', 'Rankings'],
   ['topics', 'Topic Mastery'],
   ['difficulty', 'Difficulty & Type'],
   ['trend', 'Test Trend'],
@@ -95,9 +94,6 @@ export default function IntermediateHeader({
   examTypes = [],
   examtypeid,
   onExamTypeChange,
-  years = [],
-  yearid,
-  onYearChange,
   branches = [],
   branchid,
   onBranchChange,
@@ -109,6 +105,7 @@ export default function IntermediateHeader({
   studentsCount = 0,
   testsCount = 0,
   loadingFilters = false,
+  otherStreams = [],
 }) {
   return (
     <header className="rounded-t-xl border-b border-gray-200 bg-white">
@@ -136,16 +133,6 @@ export default function IntermediateHeader({
             minWidth="150px"
           />
           <MultiSelectDropdown
-            label="Year"
-            items={years}
-            value={yearid}
-            onChange={onYearChange}
-            allLabel="All years"
-            getItemLabel={(y) => y?.yearname || y?.name || y?.id}
-            disabled={loadingFilters}
-            minWidth="140px"
-          />
-          <MultiSelectDropdown
             label="Branch"
             items={branches}
             value={branchid}
@@ -162,11 +149,16 @@ export default function IntermediateHeader({
             onChange={onExamChange}
             allLabel="All exams"
             getItemLabel={(e) => e?.label || e?.examname || e?.id}
-            disabled={loadingFilters || !streamid || !yearid}
+            disabled={loadingFilters || !streamid}
             minWidth="200px"
           />
 
           <div className="flex-1" />
+          {otherStreams.length > 0 && (
+            <span className="mb-1 rounded border border-amber-200 bg-amber-50 px-2 py-1 text-[10px] font-semibold text-amber-700">
+              Also includes students from: {otherStreams.map((s) => s.name).join(', ')}
+            </span>
+          )}
           <span className="mb-1 rounded border border-gray-200 bg-gray-50 px-2 py-1 text-[10px] font-semibold text-gray-500">
             {studentsCount} Students · {testsCount} Tests
           </span>

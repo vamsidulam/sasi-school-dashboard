@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
-import { intStudentsApi } from '../../lib/intermediateApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
+import { intStudentsApi } from '../../../lib/intermediateApi.js'
 
 // Helper function for heat map color
 function dgHeat(p) {

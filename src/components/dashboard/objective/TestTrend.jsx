@@ -11,7 +11,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { TOOLTIP_STYLE, AXIS_TICK, fmt } from './utils.js'
-import { intAnalyticsApi } from '../../lib/intermediateAnalyticsApi.js'
+import { intAnalyticsApi } from '../../../lib/intermediateAnalyticsApi.js'
 
 export default function TestTrend({ filters, ready, useLegacyData = false, legacyTrend = [] }) {
   const [loading, setLoading] = useState(false)
@@ -26,7 +26,7 @@ export default function TestTrend({ filters, ready, useLegacyData = false, legac
       return
     }
 
-    if (!ready || !filters?.streamid || !filters?.yearid || !filters?.examtypeid) {
+    if (!ready || !filters?.streamid || !filters?.examtypeid) {
       setTrendData([])
       return
     }

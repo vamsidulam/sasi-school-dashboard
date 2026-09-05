@@ -115,8 +115,39 @@ export const uploadApi = {
   },
 }
 
+// Dashboard APIs
+export const dashboardApi = {
+  studentSearch: (search, cursor, limit) => {
+    const qs = new URLSearchParams()
+    if (search) qs.set('search', search)
+    if (cursor) qs.set('cursor', cursor)
+    if (limit) qs.set('limit', String(limit))
+    return request(`/dashboard/student-search?${qs.toString()}`)
+  },
+  filters: (programId, academicYearId) => {
+    const qs = new URLSearchParams()
+    if (programId) qs.set('programId', programId)
+    if (academicYearId) qs.set('academicYearId', academicYearId)
+    return request(`/dashboard/filters?${qs.toString()}`)
+  },
+  overview: (classStandardId, academicYearId, examId, branchId) => {
+    const qs = new URLSearchParams()
+    if (classStandardId) qs.set('classStandardId', classStandardId)
+    if (academicYearId) qs.set('academicYearId', academicYearId)
+    if (examId) qs.set('examId', examId)
+    if (branchId) qs.set('branchId', branchId)
+    return request(`/dashboard/overview?${qs.toString()}`)
+  },
+}
+
 // Analysis API
 export const analysisApi = {
+  studentDetail: (studentCode, classStandardId) => {
+    const qs = new URLSearchParams()
+    qs.set('studentCode', studentCode)
+    if (classStandardId) qs.set('classStandardId', classStandardId)
+    return request(`/analysis/student-detail?${qs.toString()}`)
+  },
   stateSummary: (examId) => request(`/analysis/state-summary?examId=${encodeURIComponent(examId)}`),
   classOverview: (examId, classStandardId) =>
     request(`/analysis/class-overview?examId=${encodeURIComponent(examId)}&classStandardId=${encodeURIComponent(classStandardId)}`),

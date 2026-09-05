@@ -11,7 +11,7 @@ const STUDENT_FIELDS = [
   { key: 'branch', label: 'Branch (name/code)', placeholder: 'e.g. C or Branch' },
   { key: 'program', label: 'Program (name)', placeholder: 'e.g. D or Program' },
   { key: 'section', label: 'Section (abbreviation)', placeholder: 'e.g. E or Section' },
-  { key: 'joiningYear', label: 'Joining Year', placeholder: 'e.g. F or JoiningYear' },
+  { key: 'academicYear', label: 'Academic Year (name)', placeholder: 'e.g. F or AcademicYear' },
   { key: 'parentName', label: 'Parent Name', placeholder: 'e.g. G or ParentName' },
   { key: 'parentPhone', label: 'Parent Phone', placeholder: 'e.g. H or ParentPhone' },
 ]
@@ -195,10 +195,10 @@ export default function SchoolStudentsUploadModal({ open, onClose, onUploaded, u
 
           {result ? (
             <div className="space-y-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-              <div className="font-medium">Inserted: {result.inserted ?? 0}</div>
+              <div className="font-medium">Inserted: {result.inserted ?? 0} · Updated: {result.updated ?? 0}</div>
               {result.skipped ? (
                 <div className="text-xs text-emerald-900/80">
-                  Skipped — in-file dups: {result.skipped.inFile ?? 0} · already in DB: {result.skipped.inDb ?? 0} · invalid: {result.skipped.invalid ?? 0}
+                  Skipped — in-file dups: {result.skipped.inFile ?? 0} · invalid: {result.skipped.invalid ?? 0}
                 </div>
               ) : null}
               {result.errors?.length ? (
